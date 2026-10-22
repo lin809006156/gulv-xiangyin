@@ -116,6 +116,23 @@ class CDP {
   await cdp.send('Runtime.evaluate', { expression: `document.querySelector('#btnPlay').click()` });
   await new Promise((r) => setTimeout(r, 300));
 
+  // 播放控制区（含新的暂停/继续按钮）单独截一张
+  {
+    const clip = (await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const card = document.querySelector('#playerCard');
+        const r = card.getBoundingClientRect();
+        window.scrollBy(0, r.top - 40);
+        const r2 = card.getBoundingClientRect();
+        return { x: r2.x - 6, y: r2.y + window.scrollY - 6, width: r2.width + 12, height: r2.height + 12, scale: 2 };
+      })()`,
+      returnByValue: true
+    })).result.value;
+    const sc = await cdp.send('Page.captureScreenshot', { format: 'png', clip, captureBeyondViewport: true });
+    fs.writeFileSync(path.join(SHOTS, 'web-player-controls.png'), Buffer.from(sc.data, 'base64'));
+    console.log('[OK] web-player-controls.png');
+  }
+
   // 音层面板（疗愈九频 + 自然音层）
   await cdp.send('Runtime.evaluate', { expression: `document.querySelector('#ambSolfChips .amb-chip[data-freq=\"528\"]').click(); document.querySelector('#ambNatureChips .amb-chip[data-nature=\"rain\"]').click(); document.querySelector('#ambNatureChips .amb-chip[data-nature=\"fire\"]').click();` });
   await new Promise((r) => setTimeout(r, 300));

@@ -1,6 +1,6 @@
 {
   "name": "guaxiang-xinyin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "卦象心音 · 每日观象起卦，为每一卦生成一段心音",
   "private": true,
   "scripts": {

@@ -139,6 +139,20 @@
         </div>
       </section>
 
+      <!-- 我 -->
+      <section class="set-group">
+        <h3 class="set-title">我</h3>
+        <p class="set-desc">用于标识本机的使用者，仅存在这台设备上。</p>
+        <div class="set-row">
+          <span class="set-label">昵称</span>
+          <input class="set-input" type="text" id="setNickname" maxlength="24" placeholder="怎么称呼你">
+        </div>
+        <div class="set-row">
+          <span class="set-label">邮箱</span>
+          <input class="set-input" type="email" id="setEmail" maxlength="64" placeholder="name@example.com">
+        </div>
+      </section>
+
       <!-- 关于 -->
       <section class="set-group">
         <h3 class="set-title">关于</h3>
@@ -366,6 +380,9 @@
           <button class="btn btn-play" id="btnPlay">
             <span id="btnPlayIcon" class="play-icon">▶</span>
             <span id="btnPlayText">播放</span>
+          </button>
+          <button class="btn btn-ghost btn-sm" id="btnPause" disabled title="暂停：音乐停在原处；再按即从原处接上（无缝）">
+            <span class="pause-icon">⏸</span><span id="btnPauseText">暂停</span>
           </button>
           <button class="btn btn-ghost btn-solf" id="btnSolf" aria-pressed="false"
                   title="疗愈音层：以索菲吉奥频率（当代音疗流派所用）在五声之下极轻铺底，可随时关闭；非古律，亦不涉疗效">

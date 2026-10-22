@@ -554,6 +554,53 @@ class CDP {
     : err(`疗愈频率选择异常（on=${am.solOn} freq=${am.solFreq} param=${am.solParam}）`);
   (am.levelExists && am.solCleared) ? ok('音层总音量滑条与一键关闭就位') : err('音层控制缺失');
 
+  /* ---------- 2e-3. 暂停/继续：无缝（不重新编曲） ---------- */
+  console.log('\n【2e-3】暂停与继续');
+  const pz = await cdp.send('Runtime.evaluate', {
+    expression: `(async () => {
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+      const out = {};
+      const p = window.__gxPlayer;
+      const pauseBtn = document.querySelector('#btnPause');
+      out.exists = !!pauseBtn;
+      // 先起播（上一节结束时已停）
+      document.querySelector('#btnPlay').click();
+      await sleep(3000);
+      out.disabledBefore = pauseBtn.disabled;
+      out.playing = p.isPlaying;
+      // 暂停
+      pauseBtn.click();
+      await sleep(500);
+      out.paused = p.paused;
+      out.pauseText = document.querySelector('#btnPauseText').textContent;
+      out.liveText = (document.querySelector('#playerLiveText')||{}).textContent || '';
+      // 暂停期间不应重新编曲：同一份 PCM 对象
+      const pcmBefore = p._gen && p._gen.rounds[0] ? p._gen.rounds[0].pcm : null;
+      await sleep(700);
+      out.pcmSame = !!(p._gen && p._gen.rounds[0] && p._gen.rounds[0].pcm === pcmBefore);
+      // 继续
+      pauseBtn.click();
+      await sleep(500);
+      out.resumed = !p.paused;
+      out.pauseText2 = document.querySelector('#btnPauseText').textContent;
+      out.pcmSame2 = !!(p._gen && p._gen.rounds[0] && p._gen.rounds[0].pcm === pcmBefore);
+      out.liveText2 = (document.querySelector('#playerLiveText')||{}).textContent || '';
+      return out;
+    })()`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+  const pz2 = pz.result.value;
+  (pz2.exists && pz2.playing && pz2.paused === true && pz2.pauseText === '继续' && pz2.liveText === '已暂停')
+    ? ok('暂停：音乐挂起在原处，界面转为「继续 / 已暂停」')
+    : err(`暂停异常（paused=${pz2.paused} text=${pz2.pauseText} live=${pz2.liveText}）`);
+  (pz2.pcmSame && pz2.pcmSame2)
+    ? ok('继续：从同一份音频接着放（未重新编曲，故无缝）')
+    : err('暂停/继续期间音频被重新编曲（不是无缝）');
+  (pz2.resumed && pz2.pauseText2 === '暂停' && pz2.liveText2 === '即兴中')
+    ? ok('继续后恢复播放')
+    : err(`继续异常（resumed=${pz2.resumed} text=${pz2.pauseText2}）`);
+
   /* ---------- 2i-0. 波形台卦象方向：须与起卦栏六爻图一致 ---------- */
   console.log('\n【2i-0】波形台卦象方向');
   const dir = await cdp.send('Runtime.evaluate', {
@@ -693,11 +740,17 @@ class CDP {
   (skv.gear && skv.sheetHiddenBefore && skv.sheetOpen && skv.sheetHiddenAfter)
     ? ok('顶栏齿轮打开设置页，可开可关')
     : err(`设置页开合异常（gear=${skv.gear} open=${skv.sheetOpen}）`);
+  out.nick = (document.querySelector('#setNickname')||{}).value || '';
+  out.mail = (document.querySelector('#setEmail')||{}).value || '';
   (skv.groups.indexOf('外观') >= 0 && skv.groups.indexOf('文字') >= 0
-    && skv.groups.indexOf('播放') >= 0 && skv.groups.indexOf('数据') >= 0)
+    && skv.groups.indexOf('播放') >= 0 && skv.groups.indexOf('数据') >= 0
+    && skv.groups.indexOf('我') >= 0)
     ? ok(`设置页分组：${skv.groups}`)
     : err(`设置页分组缺失：${skv.groups}`);
   (skv.count === 3 && skv.hasSwatch) ? ok(`外观可选三种：${skv.names}`) : err(`外观选项异常（count=${skv.count}）`);
+  (skv.nick === '芦荟汁' && skv.mail === '809006156@qq.com')
+    ? ok(`「我」已填：${skv.nick} · ${skv.mail}`)
+    : err(`「我」内容异常（nick=${skv.nick} mail=${skv.mail}）`);
   (skv.fonts === 3 && skv.font === 'l')
     ? ok('字号三档可切（大档已作用于 <html data-font>）')
     : err(`字号切换异常（seg=${skv.fonts} attr=${skv.font}）`);

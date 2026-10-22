@@ -31,6 +31,7 @@
   let currentResult = null;
   let currentScore = null;
   let isPlaying = false;
+  let userPaused = false;      // 用户主动暂停（回到前台时不自动继续）
   let selectedImage = null;
   /* 播放目标：'hex' 卦象之音（即兴连播） | { type:'inst', voice } 乐器试听 */
   let playTarget = null;
@@ -164,6 +165,7 @@
     renderAmbientChips();
     bindAmbient();
     bindSkin();
+    bindVisibility();
     bindVizModes();
     restorePref();
     castDaily();
@@ -225,6 +227,9 @@
   ];
   let skin = 'paper';
   let fontSize = 'm';
+  // 「我」：昵称与邮箱（仅存本机 localStorage，不上传任何地方）
+  const ME = { nickname: '芦荟汁', email: '809006156@qq.com' };
+  let me = { nickname: ME.nickname, email: ME.email };
 
   /** 应用皮肤：改 <html data-skin> 即可整体换色 */
   function applySkin(key) {
@@ -362,6 +367,19 @@
       });
       lv.addEventListener('change', savePref);
     }
+    // 「我」：昵称与邮箱
+    const nick = $('#setNickname');
+    if (nick) {
+      nick.value = me.nickname;
+      nick.addEventListener('input', () => { me.nickname = nick.value; });
+      nick.addEventListener('change', savePref);
+    }
+    const mail = $('#setEmail');
+    if (mail) {
+      mail.value = me.email;
+      mail.addEventListener('input', () => { me.email = mail.value; });
+      mail.addEventListener('change', savePref);
+    }
     // 卦历清空
     const clr = $('#btnClearHistory2');
     if (clr) clr.addEventListener('click', () => {
@@ -379,6 +397,26 @@
       if (e.key === 'Escape') closeSettings();
     });
     renderSkinOptions();
+  }
+
+  /**
+   * 切后台再回前台
+   * ---------------------------------------------------------------
+   * 安卓 / iOS 切后台时系统会挂起 AudioContext，回前台若不恢复，
+   * 音乐会一直停着。这里在**非用户主动暂停**的前提下自动恢复 ——
+   * 因是同一条时间轴，恢复后从原处接上，仍是无缝的。
+   */
+  function bindVisibility() {
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) return;
+      if (!isPlaying || userPaused) return;
+      // 系统挂起了音频上下文（切后台）→ 恢复；用户主动暂停则不动
+      if (player.contextSuspended) {
+        player.resume();
+        setPlayState('playing');
+        setFlowState('playing');
+      }
+    });
   }
 
   /* ===============================================================
@@ -418,6 +456,10 @@
       if (pref.quality && VIZ_QUALITY[pref.quality]) {
         vizQuality = pref.quality;
       }
+      if (pref.me && typeof pref.me === 'object') {
+        if (typeof pref.me.nickname === 'string') me.nickname = pref.me.nickname;
+        if (typeof pref.me.email === 'string') me.email = pref.me.email;
+      }
       if (typeof pref.loop === 'boolean') {
         player.setLoop(pref.loop);
         const btn = $('#btnLoop');
@@ -445,7 +487,8 @@
         skin,
         font: fontSize,
         quality: vizQuality,
-        loop: player.loop
+        loop: player.loop,
+        me: { nickname: me.nickname, email: me.email }
       }));
     } catch (e) { /* 忽略 */ }
   }
@@ -742,6 +785,7 @@
     $('#btnNumber').addEventListener('click', castNumber);
 
     $('#btnPlay').addEventListener('click', togglePlay);
+    $('#btnPause').addEventListener('click', togglePause);
     $('#btnLoop').addEventListener('click', toggleLoop);
     $('#btnExport').addEventListener('click', exportWav);
     $('#btnClearHistory').addEventListener('click', clearHistory);
@@ -844,6 +888,8 @@
     // 导出的乐谱取「呈示」阶段（含轮内发展手法），避免导出旧式原样复读的一段。
     currentScore = M.composeNotes(hex, music, result.changedMusic, { form: 'chengshi' });
     renderWavePreview();
+    // 预热：在 Worker 后台把第一段编好放着，按下播放即刻出声（不必等那一秒多）
+    try { player.warmup(hex, music, result.changedMusic, buildAmbient()); } catch (e) { /* 无 Worker 则回退 */ }
     // 每卦配一支建议疗愈频率（同卦同频），用户可在「音层」另选
     ambient.sol.freq = G.solfeggioForHex(hex.n).freq;
     // 换卦即清场：旧流线不再代表新卦
@@ -1071,9 +1117,31 @@
   function togglePlay() {
     if (isPlaying) {
       stopPlayback();
-    } else {
-      startGenerative();
+      return;
     }
+    startGenerative();
+  }
+
+  /** 暂停 / 继续：挂起与恢复同一条音频时间轴，故从原处接上，无缝 */
+  function togglePause() {
+    if (!isPlaying) return;
+    if (player.paused) {
+      player.resume();
+      userPaused = false;
+      setPlayState('playing');
+      setFlowState('playing');
+    } else {
+      pausePlayback();
+    }
+  }
+
+  /** 暂停：挂起音频时间轴，音乐停在原处；雾也随声而定格 */
+  function pausePlayback() {
+    if (!isPlaying) return;
+    userPaused = true;
+    player.pause();
+    setPlayState('paused');
+    setFlowState('paused');
   }
 
   /** 循环：反复播放当前这一段，不再另编新段（与导出的 WAV 同一份乐谱） */
@@ -1116,7 +1184,7 @@
       onChange: onGenChange
     });
     isPlaying = true;
-    setPlayIcon(true);
+    setPlayState('playing');
     setFlowState('playing');
     startViz();
   }
@@ -1126,7 +1194,7 @@
     isPlaying = false;
     playTarget = null;
     auditionVoice = null;
-    setPlayIcon(false);
+    setPlayState('idle');
     markInstButtons();
     // 流线不再发射新线，已有流线向右走完并渐隐
     setFlowState('drain');
@@ -1137,6 +1205,37 @@
   function setPlayIcon(playing) {
     $('#btnPlayIcon').textContent = playing ? '❚❚' : '▶';
     $('#btnPlayText').textContent = playing ? '停止' : '播放';
+  }
+
+  /** 播放按钮三态：播放 / 暂停 / 继续
+   *  ---------------------------------------------------------------
+   * 暂停是**挂起音频时间轴**，恢复后从原处接上（无缝）；
+   * 停止才是彻底结束（下一段要重新编曲，故有一秒多的准备时间）。
+   */
+  function setPlayState(state) {
+    const icon = $('#btnPlayIcon');
+    const text = $('#btnPlayText');
+    const pause = $('#btnPause');
+    const pauseText = $('#btnPauseText');
+    if (!icon || !text) return;
+    if (state === 'paused') {
+      icon.textContent = '❚❚';
+      text.textContent = '停止';
+      if (pause) pause.disabled = false;
+      if (pauseText) pauseText.textContent = '继续';
+      $('#playerLiveText') && ($('#playerLiveText').textContent = '已暂停');
+    } else if (state === 'playing') {
+      icon.textContent = '❚❚';
+      text.textContent = '停止';
+      if (pause) pause.disabled = false;
+      if (pauseText) pauseText.textContent = '暂停';
+      $('#playerLiveText') && ($('#playerLiveText').textContent = '即兴中');
+    } else {
+      icon.textContent = '▶';
+      text.textContent = '播放';
+      if (pause) pause.disabled = true;
+      if (pauseText) pauseText.textContent = '暂停';
+    }
   }
 
   /** 播放卡片上的快捷开关：疗愈频率（其余音层在「音层」面板） */

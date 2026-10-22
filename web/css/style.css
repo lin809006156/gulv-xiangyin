@@ -2116,3 +2116,26 @@ html[data-font="l"] { --tabbar-h: 70px; }
   color: var(--cinnabar);
   box-shadow: 0 0 0 1.4px var(--cinnabar) inset, 0 4px 12px rgba(178,58,46,.14);
 }
+
+/* ---- 设置页里的「我」：昵称 / 邮箱 ---- */
+.set-input {
+  flex: 1;
+  min-width: 160px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink);
+  padding: 8px 11px;
+  border: none;
+  border-radius: 9px;
+  background: rgba(var(--tint),.55);
+  box-shadow: 0 0 0 1px var(--glass-brd-out) inset;
+  outline: none;
+  -webkit-appearance: none;
+}
+.set-input:focus {
+  box-shadow: 0 0 0 1.5px var(--cinnabar) inset;
+}
+.set-input::placeholder { color: var(--ink-4); }
+
+.pause-icon { margin-right: 4px; font-size: 12px; }
+#btnPause:disabled { opacity: .45; }

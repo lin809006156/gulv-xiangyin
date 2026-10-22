@@ -112,6 +112,10 @@ class Player {
     this.startedAt = 0;
     this.offset = 0;
 
+    // 暂停/继续：挂起 AudioContext，时间轴随之冻结，
+    // 恢复后从原处接上（无缝），不必重新编曲渲染
+    this._paused = false;
+
     // 循环播放：单曲循环（同一卦的音乐反复播放）
     this.loop = false;
     // 正在因循环而重播（用于避免重播时误触发 stopped 状态）
@@ -123,6 +127,19 @@ class Player {
     // 即兴连播会话（实时生成播放）；null 表示未在即兴
     this._gen = null;
     this._genTimer = null;
+
+    // 渲染 Worker（浏览器）：编曲渲染搬离主线程
+    this._worker = null;
+    this._workerJobs = {};
+    this._workerSeq = 0;
+    this._workerFailed = false;
+
+    // 预热池：提前编好放着，按下播放即刻出声
+    this._readyPool = [];
+    this._readyLoading = false;
+    this._readyPromise = null;   // 在途的那一轮（预热中）
+    this._readyNext = 0;
+    this._readyKey = '';
 
     // 浏览器 Web Audio
     this._ctx = null;
@@ -277,6 +294,156 @@ class Player {
    *               传入后优先于旧的 solfeggio/solfeggioLevel 两参；
    *   onChange —— (info) => void；info = { round, section, elapsed, duration }
    */
+  /**
+   * 渲染 Worker（浏览器）
+   * ---------------------------------------------------------------
+   * 一轮 67 秒的音频渲染要 1.1–1.3 秒，放在主线程上：
+   *   · 按下播放要先等这一秒多（听起来像「卡住」）
+   *   · 连播过程中每隔一分多钟也会顿一下
+   * 故把编曲+渲染搬进 Worker，主线程只收结果（PCM 以 Transferable 零拷贝交回）。
+   * Worker 不可用时（小程序 / Node / 老浏览器）自动回退到主线程同步渲染。
+   */
+
+  _ensureRenderWorker() {
+    if (this._worker) return true;
+    if (IS_NODE || IS_MINIPROGRAM) return false;
+    if (typeof Worker === 'undefined') return false;
+    if (this._workerFailed) return false;
+    try {
+      this._worker = new Worker('js/render-worker.js');
+      this._worker.onmessage = (e) => this._onWorkerMessage(e.data);
+      this._worker.onerror = (e) => {
+        // Worker 起不来：把在途的请求全部退回，让调用方回退到主线程渲染
+        this._workerFailed = true;
+        const jobs = this._workerJobs;
+        this._workerJobs = {};
+        Object.keys(jobs).forEach((id) => {
+          jobs[id].reject(new Error('渲染 Worker 出错：' + ((e && e.message) || '未知')));
+        });
+        try { this._worker.terminate(); } catch (err) { /* noop */ }
+        this._worker = null;
+      };
+      return true;
+    } catch (e) {
+      this._worker = null;
+      this._workerFailed = true;
+      return false;
+    }
+  }
+
+  _onWorkerMessage(msg) {
+    const job = this._workerJobs[msg.id];
+    if (!job) return;
+    delete this._workerJobs[msg.id];
+    if (!msg.ok) { job.reject(new Error(msg.error || '渲染失败')); return; }
+    job.resolve(msg);
+  }
+
+  /** 向 Worker 发一次渲染请求，等它回话 */
+  _workerCompose(payload) {
+    if (!this._ensureRenderWorker()) return Promise.reject(new Error('渲染 Worker 不可用'));
+    const id = ++this._workerSeq;
+    return new Promise((resolve, reject) => {
+      this._workerJobs[id] = { resolve, reject };
+      try {
+        this._worker.postMessage(Object.assign({ id, type: 'compose' }, payload));
+      } catch (e) {
+        delete this._workerJobs[id];
+        reject(e);
+      }
+    });
+  }
+
+  /** 请求 Worker 渲染一轮；不可用则回退到主线程同步渲染 */
+  _composeRoundAsync(g, roundNo) {
+    const music = bootstrap.loadMusic();
+    const D = bootstrap.loadData();
+    const seed = (((Date.now() * 7919) + Math.floor(Math.random() * 0x7fffffff) + roundNo * 104729) >>> 0) || 1;
+    const variant = music.randomVariant(D.seededRandom(seed));
+    const form = typeof music.arcAt === 'function' ? music.arcAt(roundNo) : null;
+
+    if (!this._ensureRenderWorker()) {
+      return Promise.resolve(this._genComposeRound(g, roundNo));
+    }
+    return this._workerCompose({
+      hex: g.hex, cfg: g.cfg, changedCfg: g.changedCfg,
+      seed, variant, form,
+      sampleRate: g.sampleRate, reverb: 0.32,
+      bakeAmbient: g.bakeAmbient, ambient: g.ambient
+    }).catch((e) => {
+      // Worker 起不来（或中途出错）：回退到主线程同步渲染，保证总能出声
+      this._workerFailed = true;
+      try { if (this._worker) this._worker.terminate(); } catch (err) { /* noop */ }
+      this._worker = null;
+      return this._genComposeRound(g, roundNo);
+    }).then((r) => ({
+      round: roundNo,
+      score: r.score,
+      // 与同步渲染同构：createBuffer 需要 length 与 sampleRate
+      pcm: {
+        left: r.left,
+        right: r.right,
+        sampleRate: r.sampleRate,
+        duration: r.duration,
+        length: r.length !== undefined ? r.length : r.left.length
+      },
+      form,
+      arcName: (r.score && r.score.arcName) || null
+    }));
+  }
+
+  /**
+   * 预热：提前把第一轮编好放着
+   * ---------------------------------------------------------------
+   * 用户起卦后即调用，故按下播放时通常已有现成的一段 → 即刻出声。
+   */
+  warmup(hex, cfg, changedCfg, ambient) {
+    if (!this._ensureRenderWorker()) return;
+    const g = {
+      hex, cfg, changedCfg,
+      ambient: ambient || { solfeggio: null, nature: {}, level: 1 },
+      bakeAmbient: false,
+      sampleRate: 44100
+    };
+    this._readyKey = this._warmKey(hex, cfg, changedCfg);
+    this._readyNext = 0;
+    this._readyPool = [];
+    this._fillReady(g);
+  }
+
+  _warmKey(hex, cfg, changedCfg) {
+    return [hex && hex.n, cfg && cfg.rootMidi, changedCfg && changedCfg.rootMidi].join('-');
+  }
+
+  /** 预热池：保持 N 轮现成的（编曲在后台悄悄进行，主线程不卡） */
+  _fillReady(g) {
+    if (!this._ensureRenderWorker()) return;
+    if (this._readyLoading) return;
+    const target = g && g.playing ? 2 : 1;
+    if (this._readyPool.length >= target) return;
+    this._readyLoading = true;
+    const roundNo = this._readyNext++;
+    // 记住在途的这一轮：若此时按下播放，直接用它，不必再排一轮（省一倍等待）
+    const p = this._composeRoundAsync(g, roundNo);
+    this._readyPromise = p;
+    p.then((r) => {
+      this._readyLoading = false;
+      this._readyPromise = null;
+      this._readyPool.push(r);
+      this._fillReady(g);
+    }).catch(() => {
+      this._readyLoading = false;
+      this._readyPromise = null;   // 失败则回退到主线程渲染
+    });
+  }
+
+  /** 从预热池取一段现成的（轮号须连续） */
+  _takeReady() {
+    if (!this._readyPool.length) return null;
+    const r = this._readyPool.shift();
+    return r;
+  }
+
   playGenerative(hex, cfg, changedCfg, opts) {
     const o = opts || {};
     this.stop();
@@ -323,6 +490,7 @@ class Player {
       round: 0,          // 已排期的最大轮号
       rounds: [],        // 已加入播放队列的轮次
       pending: null,     // 已渲染、等待排期的下一轮
+      loading: false,    // 正在编下一段（Worker 异步）
       playing: true,
       fails: 0,
       _lastKey: null,
@@ -331,15 +499,30 @@ class Player {
     this._gen = g;
     if (this.onStateChange) this.onStateChange('rendering');
 
-    let first;
-    try {
-      first = this._genComposeRound(g, 0);
-    } catch (e) {
-      this._gen = null;
-      if (this.onError) this.onError('生成失败：' + e.message);
+    /* 取第一段：预热池里有现成的就即刻出声；没有则后台编好（主线程不卡）再接上 */
+    const sameKey = this._readyKey === this._warmKey(hex, cfg, changedCfg);
+    const ready = sameKey ? this._takeReady() : null;
+    if (ready) {
+      this._readyNext = Math.max(this._readyNext, ready.round + 1);
+      this._startGenRound(g, ready);
       return;
     }
+    // 池里没有现成的：若正有同一卦的一轮在编（预热中），等它即可，不排第二轮
+    const inflight = sameKey ? this._readyPromise : null;
+    const p = inflight || this._composeRoundAsync(g, 0);
+    p.then((first) => {
+      if (this._gen !== g || !g.playing) return;   // 期间被停止
+      this._readyNext = Math.max(this._readyNext, first.round + 1);
+      this._startGenRound(g, first);
+    }).catch((e) => {
+      this._gen = null;
+      if (this.onError) this.onError('生成失败：' + e.message);
+    });
+  }
 
+  /** 排入一段并开始播放（即兴连播的第一段与后续段共用） */
+  _startGenRound(g, first) {
+    g.round = first.round;
     this.current = { score: first.score, pcm: first.pcm, duration: first.pcm.duration, generative: true };
     this.isPlaying = true;
 
@@ -350,6 +533,7 @@ class Player {
       g.rounds.push(first);
       if (this.onStateChange) this.onStateChange('playing');
       this._genStartTick(g);
+      this._fillReady(g);       // 趁这一段在响，把下一段备好
     }
   }
 
@@ -374,14 +558,26 @@ class Player {
     return { round: roundNo, score, pcm, form, arcName: score.arcName || null };
   }
 
+  /** 续编失败的处理：重试几次，仍不行则停止连播 */
+  _genFail(gg, e) {
+    gg.fails++;
+    if (this.onError) this.onError('续编失败：' + e.message);
+    if (gg.fails >= 5 || !gg.playing) {
+      this.stopGenerative();
+    } else {
+      setTimeout(() => { if (this._gen === gg) this._genPreload(gg); }, 2000);
+    }
+  }
+
   /** 预渲染下一轮；成功后立即排期叠尾 */
   _genPreload(g) {
     const gg = g || this._gen;
-    if (!gg || !gg.playing || gg.pending) return;
+    if (!gg || !gg.playing || gg.pending || gg.loading) return;
     if (this.onStateChange) this.onStateChange('composing');
-    try {
-      if (this.loop) {
-        // 循环模式：重播刚放完的这一段，不再另编新段
+
+    /* 循环模式：重播刚放完的这一段，不再另编新段 */
+    if (this.loop) {
+      try {
         const last = gg.rounds[gg.rounds.length - 1];
         if (!last) { this.stopGenerative(); return; }
         gg.pending = {
@@ -391,25 +587,43 @@ class Player {
           form: last.form,
           arcName: last.arcName
         };
-      } else {
-        gg.pending = this._genComposeRound(gg, gg.round + 1);
-        gg.round = gg.pending.round;
+        gg.fails = 0;
+        if (IS_MINIPROGRAM) return;   // 小程序：轮次相接，由 onEnded 触发
+        this._genScheduleNext(gg);
+      } catch (e) {
+        this._genFail(gg, e);
       }
-      gg.fails = 0;
-      if (IS_MINIPROGRAM) {
-        // 小程序：轮次顺序相接（无叠尾），由 onEnded 触发
-        return;
-      }
-      this._genScheduleNext(gg);
-    } catch (e) {
-      gg.fails++;
-      if (this.onError) this.onError('续编失败：' + e.message);
-      if (gg.fails >= 5 || !gg.playing) {
-        this.stopGenerative();
-      } else {
-        setTimeout(() => { if (this._gen === gg) this._genPreload(gg); }, 2000);
-      }
+      return;
     }
+
+    /* 非循环：从预热池取下一段（Worker 已在后台编好，取用即接上） */
+    gg.loading = true;
+    const take = () => {
+      const r = this._takeReady();
+      if (!r) return false;
+      gg.loading = false;
+      gg.pending = r;
+      gg.round = r.round;
+      gg.fails = 0;
+      if (IS_MINIPROGRAM) return true;
+      this._genScheduleNext(gg);
+      return true;
+    };
+    if (take()) return;
+
+    /* 池里空着（Worker 还在编）：等它编好 —— 主线程不卡，只是这一段衔接要等它 */
+    this._composeRoundAsync(gg, gg.round + 1).then((r) => {
+      gg.loading = false;
+      if (this._gen !== gg || !gg.playing) return;
+      gg.pending = r;
+      gg.round = r.round;
+      gg.fails = 0;
+      if (IS_MINIPROGRAM) return;
+      this._genScheduleNext(gg);
+    }).catch((e) => {
+      gg.loading = false;
+      this._genFail(gg, e);
+    });
   }
 
   /** 把预渲染好的下一轮排进 Web Audio 时间轴，与上一轮叠尾 */
@@ -1066,11 +1280,65 @@ class Player {
     return this._analyser;
   }
 
+  /**
+   * 暂停：挂起 AudioContext
+   * ---------------------------------------------------------------
+   * 挂起后音频时间轴随之冻结，已排期的声源停在原地；
+   * 恢复（resume）时从**同一处**继续，故为无缝衔接，
+   * 不必重新编曲、也不必重渲染（那一秒多的停顿正源于此）。
+   */
+  pause() {
+    if (!this._ctx || !this.isPlaying) return false;
+    if (this._ctx.state === 'suspended') { this._paused = true; return true; }
+    try {
+      const p = this._ctx.suspend();
+      if (p && p.then) p.then(() => { this._paused = true; }, () => { this._paused = false; });
+    } catch (e) {
+      return false;
+    }
+    this._paused = true;
+    if (this.onStateChange) this.onStateChange('paused');
+    return true;
+  }
+
+  /**
+   * 继续：从挂起处接着放（无缝）
+   * ---------------------------------------------------------------
+   * 两种「停住」要分清：
+   *   · 用户主动暂停（_paused）—— 恢复时从这里继续；
+   *   · 系统挂起了音频上下文（切后台、浏览器策略）—— 由 contextSuspended 报告。
+   */
+  resume() {
+    if (!this._ctx) return false;
+    const wasPaused = this._paused || this._ctx.state === 'suspended';
+    if (!wasPaused) return false;
+    try {
+      const p = this._ctx.resume();
+      if (p && p.then) p.then(() => { this._paused = false; }, () => { /* noop */ });
+    } catch (e) {
+      return false;
+    }
+    this._paused = false;
+    if (this.onStateChange) this.onStateChange('playing');
+    return true;
+  }
+
+  /** 用户是否主动按下了暂停 */
+  get paused() {
+    return !!this._paused;
+  }
+
+  /** 音频上下文是否被系统挂起（切后台 / 浏览器自动播放策略） */
+  get contextSuspended() {
+    return !!(this._ctx && this._ctx.state === 'suspended');
+  }
+
   /** 停止 */
   stop() {
     this._teardownSources();
     this.current = null;
     this.isPlaying = false;
+    this._paused = false;
     if (liveAmbientAvailable(this)) this._silenceAmbient(1.0);
     if (this.onStateChange) this.onStateChange('stopped');
   }

@@ -136,6 +136,22 @@ class CDP {
     await shot(`skin-sheet-${key}.png`);
   }
 
+  // 设置页下半部分：「我」与「关于」
+  {
+    const clip = await evalJS(`(() => {
+      document.querySelector('#skinList .skin-opt[data-key="night"]').click();
+      document.querySelector('#fontRow .seg[data-font="m"]').click();
+      const body = document.querySelector('#settingsSheet .sheet-body');
+      body.scrollTop = body.scrollHeight;
+      const r = document.querySelector('#settingsSheet').getBoundingClientRect();
+      return { x: r.x, y: r.y, width: r.width, height: r.height, scale: 2 };
+    })()`);
+    await new Promise((r) => setTimeout(r, 500));
+    const sc = await cdp.send('Page.captureScreenshot', { format: 'png', clip, captureBeyondViewport: true });
+    fs.writeFileSync(path.join(SHOTS, 'skin-sheet-me.png'), Buffer.from(sc.data, 'base64'));
+    console.log('[OK]', 'skin-sheet-me.png');
+  }
+
   // 大字号
   await evalJS(`(() => {
     document.querySelector('#skinList .skin-opt[data-key="night"]').click();

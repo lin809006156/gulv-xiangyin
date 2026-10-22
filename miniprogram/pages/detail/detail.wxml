@@ -1,0 +1,189 @@
+<!-- 卦象心音 · 卦象详情 -->
+<view class="page">
+
+  <view wx:if="{{!hasResult}}" class="empty">
+    <text class="empty-text">还没有起卦</text>
+    <text class="empty-sub">回到首页取一卦</text>
+  </view>
+
+  <block wx:else>
+
+    <!-- 卦头 -->
+    <view class="card">
+      <view class="head">
+        <text class="symbol">{{symbol}}</text>
+        <view class="head-body">
+          <text class="name">{{name}}</text>
+          <text class="meta">{{structure}} · {{virtue}}之卦</text>
+          <text class="seq">第 {{n}} 卦</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 卦辞与大象 -->
+    <view class="card">
+      <view class="card-head"><text class="title">卦辞</text></view>
+      <text class="gua-text">「{{gua}}」</text>
+      <text class="xiang-text">{{xiang}}</text>
+    </view>
+
+    <!-- 上下卦 -->
+    <view class="card">
+      <view class="card-head"><text class="title">卦体</text></view>
+      <view class="tri-grid">
+        <view class="tri">
+          <text class="tri-label">上卦</text>
+          <text class="tri-name">{{upper.name}} {{upper.symbol}}</text>
+          <text class="tri-nature">{{upper.nature}} · {{upper.wuxing}}</text>
+          <text class="tri-image">{{upper.image}}</text>
+          <text class="tri-motto">{{upper.nature_text}}</text>
+        </view>
+        <view class="tri">
+          <text class="tri-label">下卦</text>
+          <text class="tri-name">{{lower.name}} {{lower.symbol}}</text>
+          <text class="tri-nature">{{lower.nature}} · {{lower.wuxing}}</text>
+          <text class="tri-image">{{lower.image}}</text>
+          <text class="tri-motto">{{lower.nature_text}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 六爻详解 -->
+    <view class="card">
+      <view class="card-head">
+        <text class="title">六爻</text>
+        <text class="card-sub">动爻：{{movingTitle}}</text>
+      </view>
+      <view class="yao-list">
+        <view class="yao-row {{item.isMoving ? 'is-moving' : ''}}" wx:for="{{yaoList}}" wx:key="index">
+          <view class="yao-glyph">
+            <view wx:if="{{item.isYang}}" class="yao-line solid"></view>
+            <view wx:else class="yao-line broken">
+              <view class="yao-half"></view>
+              <view class="yao-half"></view>
+            </view>
+          </view>
+          <view class="yao-body">
+            <view class="yao-title-row">
+              <text class="yao-title">{{item.title}}</text>
+              <text wx:if="{{item.isMoving}}" class="yao-flag">动</text>
+              <text wx:if="{{item.changed}}" class="yao-flag gold">变{{item.changedTo}}</text>
+            </view>
+            <text class="yao-desc">{{item.position}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 动爻与变卦 -->
+    <view class="card">
+      <view class="card-head"><text class="title">动爻之义</text></view>
+      <text class="moving-text">{{movingText}}</text>
+      <view wx:if="{{changedName}}" class="changed-box">
+        <text class="changed-symbol">{{changedSymbol}}</text>
+        <text class="changed-text">{{changedText}}</text>
+      </view>
+    </view>
+
+    <!-- 今日心语 -->
+    <view class="card">
+      <view class="card-head"><text class="title">今日心语</text></view>
+      <text class="hint-text">{{hint}}</text>
+    </view>
+
+    <!-- 音乐构成 -->
+    <view class="card">
+      <view class="card-head"><text class="title">音乐构成</text></view>
+      <view class="music-params">
+        <view class="mparam" wx:for="{{musicParams}}" wx:key="label">
+          <text class="mparam-label">{{item.label}}</text>
+          <text class="mparam-value">{{item.value}}<text wx:if="{{item.sub}}" class="mparam-sub"> {{item.sub}}</text></text>
+        </view>
+      </view>
+      <text class="music-note">本卦之音由卦象推导：调式取内卦五行纳音，律由卦序而定，音色取外卦物性，速度与力度随卦德而异。</text>
+    </view>
+
+    <!-- 文献依据 -->
+    <view class="card">
+      <view class="card-head">
+        <text class="title">文献依据</text>
+        <text class="card-tag">可查证</text>
+      </view>
+
+      <!-- 起卦法 -->
+      <view wx:if="{{classicsMethod}}" class="cblock">
+        <text class="cblock-title">起卦法</text>
+        <view class="citem">
+          <text class="cbadge {{classicsMethod.srcCls}}">{{classicsMethod.srcLabel}}</text>
+          <text class="cname">{{classicsMethod.name}}</text>
+        </view>
+        <text class="ccite">{{classicsMethod.cite}}</text>
+        <text class="ctext">{{classicsMethod.text}}</text>
+        <text class="cnote">{{classicsMethod.note}}</text>
+      </view>
+
+      <!-- 所取物象 -->
+      <view wx:if="{{classicsImages.length}}" class="cblock">
+        <text class="cblock-title">所取物象</text>
+        <view wx:for="{{classicsImages}}" wx:key="name" class="cblock">
+          <view class="citem">
+            <text class="cbadge {{item.srcCls}}">{{item.srcLabel}}</text>
+            <text class="cname">{{item.name}} → {{item.guaName}}卦 {{item.guaSymbol}}</text>
+          </view>
+          <text class="ccite">{{item.cite}}</text>
+          <text class="ctext">取象之理：{{item.reason}}</text>
+          <text wx:if="{{item.alt}}" class="cnote">异说与取舍：{{item.alt}}</text>
+        </view>
+      </view>
+
+      <!-- 卦德与物象 -->
+      <view wx:if="{{classicsTrigrams.length}}" class="cblock">
+        <text class="cblock-title">卦德与物象</text>
+        <view wx:for="{{classicsTrigrams}}" wx:key="role" class="cblock">
+          <view class="citem">
+            <text class="cname">{{item.role}} {{item.name}} {{item.symbol}}　{{item.nature}}　{{item.wuxing}}</text>
+          </view>
+          <text class="ccite">《说卦传》：{{item.shuogua}}</text>
+          <text class="ctext">《梅花易数》属类：{{item.meihua}}</text>
+          <text class="cnote">类象歌诀：{{item.koujue}}</text>
+        </view>
+      </view>
+
+      <!-- 乐器 -->
+      <view wx:if="{{classicsVoice}}" class="cblock">
+        <text class="cblock-title">乐器（外卦配八音）</text>
+        <view class="citem">
+          <text class="cname">{{classicsVoice.name}}　{{classicsVoice.material}}声</text>
+          <text class="csub">配{{classicsVoice.trigramName}}卦</text>
+        </view>
+        <text class="ctext">音色：{{classicsVoice.timbre}}</text>
+        <text class="ctext">{{classicsVoice.desc}}</text>
+        <text class="ccite">{{classicsVoice.cite}}</text>
+      </view>
+
+      <!-- 调式（五音） -->
+      <view wx:if="{{classicsMode}}" class="cblock">
+        <text class="cblock-title">调式（内卦五行纳音）</text>
+        <view class="citem">
+          <text class="cname">{{classicsMode.full}}　{{classicsMode.wuxing}}</text>
+          <text class="csub">{{classicsMode.role}}　{{classicsMode.meaning}}</text>
+        </view>
+        <text class="ctext">清浊：{{classicsMode.clarityLabel}}（{{classicsMode.claritySrc}}）</text>
+        <text class="ctext">音色：{{classicsMode.timbre}}</text>
+        <text class="ctext">五脏配属：{{classicsMode.organ}}（{{classicsMode.organSrc}}）</text>
+        <text class="cnote">{{classicsMode.meaningSrc}}</text>
+        <text class="cnote">{{classicsMode.roleSrc}}</text>
+        <text class="cnote">{{classicsMode.animal}}</text>
+      </view>
+
+      <!-- 声明 -->
+      <view wx:if="{{classicsDisclaimer}}" class="cblock cblock-dis">
+        <text class="cblock-title">声明</text>
+        <text class="ctext">{{classicsDisclaimer.music}}</text>
+        <text class="ctext">{{classicsDisclaimer.divination}}</text>
+        <text class="cnote">{{classicsDisclaimer.source}}</text>
+      </view>
+    </view>
+
+  </block>
+</view>

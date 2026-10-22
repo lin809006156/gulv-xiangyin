@@ -1,0 +1,57 @@
+{
+  "name": "卦象心音 · 每日观象起卦",
+  "short_name": "卦象心音",
+  "description": "观身边之物起卦，为每一卦生成一段心音。传统文化与艺术创作，不含预测功效。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F0E6",
+  "theme_color": "#EFE8DA",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "categories": ["music", "lifestyle", "education"],
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "取今日之卦",
+      "short_name": "今日之卦",
+      "url": "./index.html?mode=daily"
+    },
+    {
+      "name": "观象起卦",
+      "short_name": "观象",
+      "url": "./index.html?mode=image"
+    },
+    {
+      "name": "学易 · 六十四卦",
+      "short_name": "学易",
+      "url": "./index.html?mode=learn"
+    }
+  ]
+}

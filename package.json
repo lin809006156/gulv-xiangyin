@@ -1,0 +1,24 @@
+{
+  "name": "guaxiang-xinyin",
+  "version": "1.0.0",
+  "description": "卦象心音 · 每日观象起卦，为每一卦生成一段心音",
+  "private": true,
+  "scripts": {
+    "sync": "node scripts/sync-core.js",
+    "icons": "node scripts/gen-icons.js",
+    "test": "node scripts/verify.js && node scripts/test.js && node scripts/mp-test.js",
+    "bench": "node scripts/bench.js",
+    "build:android": "npm run sync && npm run icons && npx cap sync android && npx cap open android",
+    "build:ios": "npm run sync && npm run icons && npx cap sync ios && npx cap open ios"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@capacitor/splash-screen": "^6.0.0",
+    "opencc-js": "^1.4.2"
+  }
+}

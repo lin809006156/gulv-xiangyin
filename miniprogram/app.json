@@ -1,0 +1,38 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/vision/vision",
+    "pages/detail/detail",
+    "pages/calendar/calendar"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#EFE8DA",
+    "navigationBarTitleText": "卦象心音",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F5F0E6"
+  },
+  "tabBar": {
+    "color": "#8A8175",
+    "selectedColor": "#B23A2E",
+    "backgroundColor": "#F5F0E6",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "起卦"
+      },
+      {
+        "pagePath": "pages/vision/vision",
+        "text": "识象"
+      },
+      {
+        "pagePath": "pages/calendar/calendar",
+        "text": "卦历"
+      }
+    ]
+  },
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
+}

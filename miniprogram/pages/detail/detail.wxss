@@ -1,0 +1,336 @@
+/* 卦象心音 · 详情页样式 */
+
+.page { padding-bottom: 40rpx; }
+
+.empty {
+  padding: 160rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.empty-text { font-size: 30rpx; color: var(--ink-3); }
+.empty-sub { font-size: 24rpx; color: var(--ink-4); }
+
+/* ---------- 卦头 ---------- */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 28rpx;
+}
+
+.symbol {
+  font-size: 84rpx;
+  color: var(--cinnabar);
+  line-height: 1;
+}
+
+.head-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.name {
+  font-size: 40rpx;
+  font-weight: 600;
+  letter-spacing: .12em;
+  color: var(--ink);
+}
+
+.meta { font-size: 25rpx; color: var(--ink-3); }
+.seq { font-size: 21rpx; color: var(--ink-4); letter-spacing: .1em; }
+
+/* ---------- 卦辞 ---------- */
+.card-sub {
+  font-size: 22rpx;
+  color: var(--ink-4);
+}
+
+.gua-text {
+  display: block;
+  font-size: 30rpx;
+  color: var(--ink);
+  line-height: 1.9;
+  margin-bottom: 16rpx;
+}
+
+.xiang-text {
+  display: block;
+  font-size: 25rpx;
+  color: var(--ink-3);
+  line-height: 1.9;
+}
+
+/* ---------- 卦体 ---------- */
+.tri-grid {
+  display: flex;
+  gap: 20rpx;
+}
+
+.tri {
+  flex: 1;
+  background: var(--paper);
+  border-radius: 10rpx;
+  padding: 24rpx 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.tri-label {
+  font-size: 20rpx;
+  color: var(--ink-4);
+  letter-spacing: .16em;
+}
+
+.tri-name {
+  font-size: 32rpx;
+  color: var(--cinnabar);
+  font-weight: 600;
+}
+
+.tri-nature {
+  font-size: 21rpx;
+  color: var(--ink-3);
+  letter-spacing: .06em;
+}
+
+.tri-image {
+  font-size: 21rpx;
+  color: var(--ink-4);
+  line-height: 1.6;
+  margin-top: 4rpx;
+}
+
+.tri-motto {
+  font-size: 21rpx;
+  color: var(--ink-3);
+  line-height: 1.65;
+  font-style: italic;
+  margin-top: 4rpx;
+}
+
+/* ---------- 六爻 ---------- */
+.yao-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.yao-row {
+  display: flex;
+  gap: 20rpx;
+  align-items: flex-start;
+  padding: 12rpx 0;
+  border-bottom: 2rpx solid var(--line-soft);
+}
+
+.yao-row:last-child { border-bottom: none; }
+
+.yao-glyph {
+  width: 88rpx;
+  flex-shrink: 0;
+  padding-top: 10rpx;
+}
+
+.yao-line { display: flex; gap: 10rpx; height: 12rpx; }
+.yao-line.solid { width: 88rpx; background: var(--ink); border-radius: 2rpx; }
+.yao-line.broken { width: 88rpx; justify-content: space-between; }
+.yao-half { width: 39rpx; height: 12rpx; background: var(--ink); border-radius: 2rpx; }
+
+.yao-row.is-moving .yao-line.solid,
+.yao-row.is-moving .yao-half { background: var(--cinnabar); }
+
+.yao-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.yao-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.yao-title {
+  font-size: 27rpx;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.yao-flag {
+  font-size: 19rpx;
+  color: #FFF8F0;
+  background: var(--cinnabar);
+  padding: 2rpx 12rpx;
+  border-radius: 4rpx;
+}
+
+.yao-flag.gold { background: var(--gold); }
+
+.yao-desc {
+  font-size: 23rpx;
+  color: var(--ink-3);
+  line-height: 1.7;
+}
+
+/* ---------- 动爻 ---------- */
+.moving-text {
+  display: block;
+  font-size: 27rpx;
+  color: var(--ink-2);
+  line-height: 1.9;
+}
+
+.changed-box {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  margin-top: 22rpx;
+  padding: 20rpx 22rpx;
+  background: var(--paper);
+  border-radius: 10rpx;
+}
+
+.changed-symbol {
+  font-size: 46rpx;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.changed-text {
+  flex: 1;
+  font-size: 24rpx;
+  color: var(--ink-3);
+  line-height: 1.7;
+}
+
+/* ---------- 心语 ---------- */
+.hint-text {
+  display: block;
+  font-size: 29rpx;
+  color: var(--ink);
+  line-height: 1.95;
+}
+
+/* ---------- 音乐构成 ---------- */
+.music-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.mparam {
+  width: calc(50% - 6rpx);
+  background: var(--paper);
+  border-radius: 8rpx;
+  padding: 16rpx 16rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.mparam-label {
+  font-size: 20rpx;
+  color: var(--ink-4);
+  letter-spacing: .1em;
+}
+
+.mparam-value {
+  font-size: 25rpx;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.mparam-sub {
+  font-size: 19rpx;
+  color: var(--ink-4);
+  font-weight: 400;
+}
+
+.music-note {
+  display: block;
+  margin-top: 22rpx;
+  font-size: 21rpx;
+  color: var(--ink-4);
+  line-height: 1.8;
+}
+
+/* ---------- 文献依据 ---------- */
+.cblock { margin-bottom: 24rpx; }
+.cblock:last-child { margin-bottom: 0; }
+.cblock-dis {
+  padding-top: 20rpx;
+  border-top: 2rpx dashed var(--line-soft);
+}
+
+.cblock-title {
+  display: block;
+  font-size: 24rpx;
+  color: var(--cinnabar);
+  letter-spacing: .08em;
+  margin-bottom: 10rpx;
+  font-weight: 600;
+}
+
+.citem {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-bottom: 8rpx;
+}
+
+.cname { font-size: 26rpx; color: var(--ink); }
+.csub  { font-size: 22rpx; color: var(--ink-4); }
+
+.ccite {
+  display: block;
+  font-size: 23rpx;
+  line-height: 1.75;
+  color: var(--ink-2);
+  border-left: 4rpx solid var(--line);
+  padding-left: 16rpx;
+  margin: 6rpx 0 10rpx;
+}
+
+.ctext {
+  display: block;
+  font-size: 23rpx;
+  line-height: 1.8;
+  color: var(--ink-2);
+  margin: 4rpx 0;
+}
+
+.cnote {
+  display: block;
+  font-size: 21rpx;
+  line-height: 1.8;
+  color: var(--ink-4);
+  margin: 4rpx 0;
+}
+
+/* 出处分档徽标 */
+.cbadge {
+  font-size: 19rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 18rpx;
+  border: 2rpx solid transparent;
+  letter-spacing: .04em;
+}
+.src-classic { color: var(--ink-2); background: rgba(74, 68, 60, .07); border-color: rgba(74, 68, 60, .2); }
+.src-later  { color: var(--gold);   background: rgba(168, 137, 79, .1); border-color: rgba(168, 137, 79, .28); }
+.src-modern { color: var(--cinnabar); background: var(--cinnabar-soft); border-color: rgba(178, 58, 46, .24); }
+
+.card-tag {
+  font-size: 19rpx;
+  color: var(--ink-4);
+  border: 2rpx solid var(--line);
+  border-radius: 18rpx;
+  padding: 2rpx 14rpx;
+  letter-spacing: .06em;
+}

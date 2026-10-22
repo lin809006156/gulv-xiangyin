@@ -1,0 +1,36 @@
+# 依赖
+node_modules/
+
+# 构建产物（由 npm run build:android / npx cap sync 生成）
+dist/
+*.apk
+*.aab
+*.ipa
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/capacitor-cordova-android-plugins/
+ios/App/Pods/
+ios/App/build/
+ios/App/output/
+
+# 运行时与测试产物（可由脚本重新生成）
+screenshots/
+shots/
+samples/
+*.log
+
+# 本地私有配置（微信开发者工具的个人设置）
+miniprogram/project.private.config.json
+scripts/.cache/probe.html
+
+# 编辑器与系统
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

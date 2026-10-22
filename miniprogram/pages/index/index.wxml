@@ -1,0 +1,206 @@
+<!-- 卦象心音 · 首页 -->
+<view class="page">
+
+  <!-- ============ 顶部 ============ -->
+  <view class="header">
+    <view class="brand">
+      <text class="brand-mark">卦</text>
+      <view class="brand-text">
+        <text class="brand-title">卦象心音</text>
+        <text class="brand-sub">观身边之物 · 每日起一卦 · 生一段心音</text>
+      </view>
+    </view>
+    <view class="header-date">
+      <text>{{dateCn}}</text>
+      <text class="date-num">{{dateNum}}</text>
+    </view>
+  </view>
+
+  <!-- ============ 起卦区 ============ -->
+  <view class="card">
+    <view class="card-head">
+      <text class="title">起卦</text>
+      <view class="tabs">
+        <view
+          wx:for="{{modes}}"
+          wx:key="key"
+          class="tab {{mode === item.key ? 'is-active' : ''}}"
+          data-mode="{{item.key}}"
+          bindtap="onModeChange"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
+    <!-- 每日一卦 -->
+    <view wx:if="{{mode === 'daily'}}" class="panel">
+      <text class="panel-desc">依梅花易数时间起卦，以年月日时成卦。同一日之内，此卦恒定不变。</text>
+      <view class="btn btn-primary" bindtap="castDaily">取今日之卦</view>
+      <text class="panel-note">{{dailyNote}}</text>
+    </view>
+
+    <!-- 观象起卦 -->
+    <view wx:elif="{{mode === 'image'}}" class="panel">
+      <view class="camera-entry" bindtap="goVision">
+        <view class="camera-entry-icon">◎</view>
+        <view class="camera-entry-body">
+          <view class="camera-entry-title">拍照识象</view>
+          <view class="camera-entry-sub">让程序看照片，自动认出你身边的物象</view>
+        </view>
+        <view class="camera-entry-arrow">›</view>
+      </view>
+
+      <text class="panel-desc">眼前所见皆可成卦。选取身边物象为上卦，以当下时辰为下卦。</text>
+      <view class="image-groups">
+        <view class="img-group" wx:for="{{imageGroups}}" wx:key="category">
+          <text class="img-group-title">{{item.category}}</text>
+          <view class="img-grid">
+            <view
+              wx:for="{{item.items}}"
+              wx:for-item="it"
+              wx:key="name"
+              class="img-chip {{selectedImageName === it.name ? 'is-selected' : ''}}"
+              data-name="{{it.name}}"
+              data-gua="{{it.gua}}"
+              bindtap="onImageSelect"
+            >
+              <text class="chip-name">{{it.name}}</text>
+              <text class="chip-gua">{{it.guaName}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="image-selected">
+        <text class="sel-label">已选物象</text>
+        <text class="sel-name">{{selectedImageName}}</text>
+        <text class="sel-gua">{{selectedImageGua}}</text>
+      </view>
+      <view class="btn btn-primary" bindtap="castImage">以此象起卦</view>
+    </view>
+
+    <!-- 数字起卦 -->
+    <view wx:else class="panel">
+      <text class="panel-desc">心念所至，报两数以上卦。上卦取第一数，下卦取第二数，动爻由两数之和定。</text>
+      <view class="number-row">
+        <view class="num-field">
+          <text class="num-label">上卦数</text>
+          <input
+            class="num-input"
+            type="number"
+            value="{{numUpper}}"
+            data-key="numUpper"
+            bindinput="onNumInput"
+          />
+        </view>
+        <view class="num-field">
+          <text class="num-label">下卦数</text>
+          <input
+            class="num-input"
+            type="number"
+            value="{{numLower}}"
+            data-key="numLower"
+            bindinput="onNumInput"
+          />
+        </view>
+      </view>
+      <view class="btn btn-primary" bindtap="castNumber">起卦</view>
+    </view>
+  </view>
+
+  <!-- ============ 卦象区 ============ -->
+  <view wx:if="{{hasResult}}" class="card">
+    <view class="result-head">
+      <view class="yao-figure">
+        <view
+          wx:for="{{yaoList}}"
+          wx:key="title"
+          class="yao {{item.isMoving ? 'moving' : ''}} {{item.changed ? 'changed' : ''}}"
+        >
+          <view wx:if="{{item.isYang}}" class="yao-line solid"></view>
+          <view wx:else class="yao-line broken">
+            <view class="yao-half"></view>
+            <view class="yao-half"></view>
+          </view>
+        </view>
+      </view>
+      <view class="result-title">
+        <text class="result-symbol">{{symbol}}</text>
+        <text class="result-name">{{name}}</text>
+        <view class="result-meta">
+          <text>{{structure}}</text>
+          <text class="dot">·</text>
+          <text>{{virtue}}之卦</text>
+          <text class="dot">·</text>
+          <text>{{methodText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="reading">
+      <text class="reading-gua">「{{gua}}」</text>
+      <text class="reading-xiang">{{xiang}}</text>
+      <view class="reading-box">
+        <text class="reading-tag">今日心语</text>
+        <text class="reading-body">{{hint}}</text>
+      </view>
+      <view class="reading-box sub">
+        <text class="reading-tag">动爻</text>
+        <text class="reading-body">{{movingText}}</text>
+      </view>
+      <text wx:if="{{changedText}}" class="reading-changed">{{changedText}}</text>
+    </view>
+
+    <!-- 音乐参数 -->
+    <view class="music-params">
+      <view class="mparam" wx:for="{{musicParams}}" wx:key="label">
+        <text class="mparam-label">{{item.label}}</text>
+        <text class="mparam-value">{{item.value}}<text wx:if="{{item.sub}}" class="mparam-sub"> {{item.sub}}</text></text>
+      </view>
+    </view>
+
+    <view class="btn btn-ghost detail-btn" bindtap="goDetail">查看卦象详解</view>
+  </view>
+
+  <!-- ============ 播放器 ============ -->
+  <view wx:if="{{hasResult}}" class="card">
+    <view class="card-head">
+      <text class="title">心音</text>
+      <text class="player-time">{{playerTime}}</text>
+    </view>
+
+    <view class="progress-wrap">
+      <view class="progress-track">
+        <view class="progress-fill" style="width: {{progressPercent}}%"></view>
+        <view class="progress-sections">
+          <text
+            wx:for="{{sections}}"
+            wx:key="label"
+            class="prog-sec"
+            style="left: {{item.left}}%"
+          >{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="player-controls">
+      <view class="btn btn-play" bindtap="togglePlay">
+        <text class="play-icon">{{isPlaying ? '❚❚' : '▶'}}</text>
+        <text>{{isPlaying ? '停止' : '播放'}}</text>
+      </view>
+      <view class="btn btn-ghost btn-sm btn-loop {{loopOn ? 'on' : ''}}" bindtap="toggleLoop">
+        <text class="loop-icon">🔁</text>
+        <text>循环</text>
+      </view>
+      <view class="btn btn-ghost btn-sm" bindtap="goCalendar">卦历</view>
+    </view>
+
+    <text class="player-tip">{{playerTip}}</text>
+  </view>
+
+  <!-- ============ 免责 ============ -->
+  <view class="disclaimer">
+    <text>本应用以《周易》卦象与古代律吕文化为灵感，生成供个人赏析与静心的音乐，</text>
+    <text class="strong">属传统文化与艺术创作，不含任何预测功效。</text>
+    <text>五音之说是传统音乐与养生观念，非现代医学结论，不可替代医疗与专业建议。</text>
+  </view>
+
+</view>

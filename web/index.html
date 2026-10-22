@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#EFE8DA">
+<meta name="description" content="观身边之物起卦，为每一卦生成一段心音。传统文化与艺术创作，不含预测功效。">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="卦象心音">
+<title>卦象心音 · 每日观象起卦</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="glass-app">
+
+  <!-- ============ 顶部 ============ -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-mark">卦</span>
+        <div class="brand-text">
+          <h1>卦象心音</h1>
+          <p>观身边之物 · 每日起一卦 · 生一段心音</p>
+        </div>
+      </div>
+      <div class="header-date">
+        <span id="dateCn">—</span>
+        <span id="dateNum" class="date-num"></span>
+        <span id="dateClock" class="date-clock">--:--:--</span>
+      </div>
+      <button class="btn btn-ghost btn-sm install-btn hidden" id="btnInstall">安装到桌面</button>
+      <button class="icon-btn" id="btnSettings" type="button" aria-label="设置" title="设置">
+        <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
+          <path fill="currentColor"
+            d="M12 8.6A3.4 3.4 0 1 0 12 15.4 3.4 3.4 0 1 0 12 8.6Zm8.3 3.4c0 .5 0 1-.1 1.4l2 1.6-1.9 3.3-2.4-1a7.7 7.7 0 0 1-2.4 1.4l-.4 2.5h-3.8l-.4-2.5a7.7 7.7 0 0 1-2.4-1.4l-2.4 1-1.9-3.3 2-1.6a8 8 0 0 1 0-2.8l-2-1.6L6.1 5l2.4 1a7.7 7.7 0 0 1 2.4-1.4L11.3 2h3.8l.4 2.5a7.7 7.7 0 0 1 2.4 1.4l2.4-1 1.9 3.3-2 1.6c.1.5.1.9.1 1.4Z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ 设置面板（顶栏齿轮进入） ============ -->
+  <div class="sheet-mask" id="sheetMask" hidden></div>
+  <aside class="sheet" id="settingsSheet" hidden aria-label="设置">
+    <div class="sheet-head">
+      <h2>设置</h2>
+      <button class="icon-btn" id="btnSettingsClose" type="button" aria-label="关闭设置">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path fill="currentColor" d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6 6.4 5Z"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="sheet-body">
+      <!-- 外观 -->
+      <section class="set-group">
+        <h3 class="set-title">外观</h3>
+        <p class="set-desc">玻璃质感的呈现方式，即时生效并记住。</p>
+        <div class="skin-list" id="skinList">
+          <button class="skin-opt" data-key="paper" type="button">
+            <span class="skin-swatch sw-paper" aria-hidden="true"></span>
+            <span class="skin-txt">
+              <span class="skin-name">纸本</span>
+              <span class="skin-desc">宣纸柔雾，默认</span>
+            </span>
+          </button>
+          <button class="skin-opt" data-key="shine" type="button">
+            <span class="skin-swatch sw-shine" aria-hidden="true"></span>
+            <span class="skin-txt">
+              <span class="skin-name">流光</span>
+              <span class="skin-desc">更透明的液态玻璃</span>
+            </span>
+          </button>
+          <button class="skin-opt" data-key="night" type="button">
+            <span class="skin-swatch sw-night" aria-hidden="true"></span>
+            <span class="skin-txt">
+              <span class="skin-name">夜航</span>
+              <span class="skin-desc">深色夜光玻璃</span>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 文字 -->
+      <section class="set-group">
+        <h3 class="set-title">文字</h3>
+        <p class="set-desc">正文字号，全站随之变化。</p>
+        <div class="seg-row" id="fontRow">
+          <button class="seg" data-font="s" type="button">小</button>
+          <button class="seg" data-font="m" type="button">标准</button>
+          <button class="seg" data-font="l" type="button">大</button>
+        </div>
+      </section>
+
+      <!-- 播放 -->
+      <section class="set-group">
+        <h3 class="set-title">播放</h3>
+        <div class="set-row">
+          <span class="set-label">音量</span>
+          <input type="range" id="setVolume" min="0" max="100" value="85" aria-label="音量">
+          <span class="set-num" id="setVolumeNum">85</span>
+        </div>
+        <div class="set-row">
+          <span class="set-label">波形台</span>
+          <div class="seg-row" id="setVizRow">
+            <button class="seg" data-viz="hex3d" type="button">卦象立体</button>
+            <button class="seg" data-viz="silk" type="button">丝弦波形</button>
+            <button class="seg" data-viz="ripple" type="button">卦象涟漪</button>
+          </div>
+        </div>
+        <div class="set-row">
+          <span class="set-label">音层总量</span>
+          <input type="range" id="setAmbLevel" min="0" max="100" value="100" aria-label="音层总量">
+          <span class="set-num" id="setAmbLevelNum">100</span>
+        </div>
+      </section>
+
+      <!-- 画质 -->
+      <section class="set-group">
+        <h3 class="set-title">画质</h3>
+        <p class="set-desc">波形台的粒子密度。低配手机可选「性能」，帧率更稳。</p>
+        <div class="seg-row" id="qualityRow">
+          <button class="seg" data-q="high" type="button">高清</button>
+          <button class="seg" data-q="perf" type="button">性能</button>
+        </div>
+      </section>
+
+      <!-- 数据 -->
+      <section class="set-group">
+        <h3 class="set-title">数据</h3>
+        <div class="set-row">
+          <span class="set-label">卦历</span>
+          <span class="set-num" id="setHistoryNum">0 条</span>
+          <button class="btn btn-ghost btn-sm" id="btnClearHistory2" type="button">清空</button>
+        </div>
+      </section>
+
+      <!-- 关于 -->
+      <section class="set-group">
+        <h3 class="set-title">关于</h3>
+        <p class="set-about">
+          <b>卦象心音</b> · 以《周易》卦象与古代律吕文化为灵感，
+          为每一卦生成一段供赏析与静心的音乐。属传统文化与艺术创作，
+          <b>不含任何预测功效</b>；五音之说为传统音乐与养生观念，非现代医学结论。
+        </p>
+        <p class="set-ver">版本 1.0 · 三端同源（网页 / 应用 / 小程序）</p>
+      </section>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ==================================================
+         页一 · 起卦（每日一卦 / 观象起卦[含拍照识象] / 数字起卦）
+         ================================================== -->
+    <section class="page is-active" id="pageCast">
+
+      <div class="glass-card" id="castCard">
+        <div class="card-head">
+          <h2>起卦</h2>
+          <div class="segmented" id="castTabs">
+            <button class="tab is-active" data-mode="daily">每日一卦</button>
+            <button class="tab" data-mode="image">观象起卦</button>
+            <button class="tab" data-mode="number">数字起卦</button>
+          </div>
+        </div>
+
+        <!-- 每日一卦 -->
+        <div class="tab-panel is-active" data-panel="daily">
+          <p class="panel-desc">
+            依梅花易数时间起卦，以年月日时成卦。同一日之内，此卦恒定不变。
+          </p>
+          <button class="btn btn-primary" id="btnDaily">
+            <span id="btnDailyText">取今日之卦</span>
+          </button>
+          <p class="panel-note" id="dailyNote"></p>
+        </div>
+
+        <!-- 观象起卦（拍照识象并入此栏） -->
+        <div class="tab-panel" data-panel="image">
+          <p class="panel-desc">
+            眼前所见皆可成卦。选取身边物象为上卦，以当下时辰为下卦。
+          </p>
+
+          <!-- 拍照识象 -->
+          <div class="vision-box">
+            <input type="file" id="visionFile" accept="image/*" capture="environment" hidden>
+            <div class="vision-row">
+              <button class="btn btn-ghost btn-sm" id="btnVisionPick">拍照或选图识别</button>
+              <span class="vision-hint" id="visionHint">让程序看照片，自动认出你身边的物象</span>
+            </div>
+            <div class="vision-preview" id="visionPreview" hidden>
+              <img id="visionImg" alt="所拍照片" decoding="async">
+              <button class="vision-clear" id="btnVisionClear" title="移除">×</button>
+            </div>
+            <div class="vision-result" id="visionResult" hidden>
+              <p class="vision-result-hint" id="visionResultHint"></p>
+              <div class="vision-cands" id="visionCands"></div>
+              <button class="btn btn-primary" id="btnVisionCast" disabled>以此物象起卦</button>
+            </div>
+            <div class="vision-config" id="visionConfig" hidden>
+              <label class="vision-cfg-field">
+                <span>视觉接口地址（可选，留空则手动选）</span>
+                <input type="text" id="visionEndpoint" placeholder="如 https://…/v1/chat/completions">
+              </label>
+              <label class="vision-cfg-field">
+                <span>API Key（如需）</span>
+                <input type="password" id="visionKey" placeholder="留空表示无需鉴权">
+              </label>
+              <p class="vision-cfg-note">
+                留空即可直接使用下方「手动选物象」，取卦效果与拍照完全一致。
+              </p>
+            </div>
+          </div>
+
+          <div class="image-picker" id="imagePicker"></div>
+          <div class="image-search">
+            <input type="text" id="imageSearch" placeholder="搜索物象，如：桌子 / 椅子 / 狗">
+          </div>
+          <div class="image-selected">
+            <span class="sel-label">已选物象</span>
+            <span class="sel-name" id="selImageName">未选择</span>
+            <span class="sel-gua" id="selImageGua"></span>
+          </div>
+          <button class="btn btn-primary" id="btnImage" disabled>以此象起卦</button>
+        </div>
+
+        <!-- 数字起卦 -->
+        <div class="tab-panel" data-panel="number">
+          <p class="panel-desc">
+            心念所至，报两数以上卦。上卦取第一数，下卦取第二数，动爻由两数之和定。
+          </p>
+          <div class="number-row">
+            <label class="num-field">
+              <span>上卦数</span>
+              <input type="number" id="numUpper" min="1" max="999" placeholder="如 17" value="17">
+            </label>
+            <label class="num-field">
+              <span>下卦数</span>
+              <input type="number" id="numLower" min="1" max="999" placeholder="如 43" value="43">
+            </label>
+          </div>
+          <button class="btn btn-primary" id="btnNumber">起卦</button>
+        </div>
+
+      </div>
+
+      <!-- ============ 卦象区 ============ -->
+      <div class="glass-card hidden" id="resultCard">
+        <div class="result-head">
+          <div class="yao-figure" id="yaoFigure"></div>
+          <div class="result-title">
+            <div class="result-symbol" id="resultSymbol">䷀</div>
+            <h2 id="resultName">—</h2>
+            <p class="result-meta">
+              <span id="resultStructure"></span>
+              <span class="dot">·</span>
+              <span id="resultVirtue"></span>
+              <span class="dot">·</span>
+              <span id="resultMethod"></span>
+            </p>
+          </div>
+        </div>
+
+        <div class="reading">
+          <p class="reading-gua" id="resultGua"></p>
+          <p class="reading-xiang" id="resultXiang"></p>
+          <div class="reading-box" id="resultHintBox">
+            <span class="reading-tag">今日心语</span>
+            <p id="resultHint"></p>
+          </div>
+          <div class="reading-box reading-box-sub" id="resultMovingBox">
+            <span class="reading-tag">动爻</span>
+            <p id="resultMoving"></p>
+          </div>
+          <p class="reading-changed" id="resultChanged"></p>
+        </div>
+
+        <!-- 音乐参数 -->
+        <div class="music-params" id="musicParams"></div>
+
+        <!-- 同步到音乐栏 -->
+        <button class="btn btn-soft btn-jump-music" id="btnJumpMusic">
+          <span class="jm-icon">♪</span> 此卦之心音已同步至「音乐」栏
+        </button>
+
+        <!-- 文献依据 -->
+        <details class="classics" id="classicsPanel">
+          <summary class="classics-summary">
+            <span class="classics-summary-tag">文献依据</span>
+            <span class="classics-summary-text">这一卦的取象、乐器与调式，各据何典</span>
+          </summary>
+          <div class="classics-body" id="classicsBody"></div>
+        </details>
+      </div>
+
+      <!-- ============ 卦历 ============ -->
+      <div class="glass-card hidden" id="historyCard">
+        <div class="card-head">
+          <h2>卦历</h2>
+          <button class="btn btn-ghost btn-sm" id="btnClearHistory">清空</button>
+        </div>
+        <p class="panel-desc">已记录的卦象，点击可回看并重听。</p>
+        <div class="history-list" id="historyList"></div>
+      </div>
+
+    </section>
+
+    <!-- ==================================================
+         页二 · 音乐（当前卦象心音 + 播放器 + 乐器园试听）
+         ================================================== -->
+    <section class="page" id="pageMusic">
+
+      <!-- 当前心音 -->
+      <div class="glass-card" id="musicNowCard">
+        <div class="music-empty" id="musicEmpty">
+          <div class="me-icon">☯</div>
+          <h3>还没有卦象之音</h3>
+          <p>先在「起卦」栏取一卦，这里就会出现属于它的心音；<br>也可以先到下方乐器园试听八音。</p>
+          <button class="btn btn-primary" id="btnGoCast">去起一卦</button>
+        </div>
+        <div class="music-now hidden" id="musicNow">
+          <div class="mn-head">
+            <div class="mn-symbol" id="musicNowSymbol">䷀</div>
+            <div class="mn-title">
+              <h3 id="musicNowName">—</h3>
+              <p id="musicNowMeta"></p>
+            </div>
+          </div>
+          <div class="mn-params" id="musicNowParams"></div>
+        </div>
+      </div>
+
+      <!-- 播放器：即兴连播，无进度条（音乐本无终点） -->
+      <div class="glass-card hidden" id="playerCard">
+        <div class="card-head">
+          <h2>心音</h2>
+          <span class="gen-live" id="playerLive" hidden><span class="live-dot"></span><span id="playerLiveText">即兴中</span></span>
+        </div>
+
+        <div class="viz-modes" id="vizModes">
+          <button class="viz-mode is-active" data-viz="hex3d" type="button">卦象立体</button>
+          <button class="viz-mode" data-viz="silk" type="button">丝弦波形</button>
+          <button class="viz-mode" data-viz="ripple" type="button">卦象涟漪</button>
+        </div>
+
+        <canvas id="viz" class="viz" width="1200" height="320"></canvas>
+
+        <!-- 音频波形预览条：此卦心音的乐形（由音符表直接算包络，不重渲染） -->
+        <div class="wave-preview-wrap">
+          <canvas id="wavePreview" class="wave-preview" width="1200" height="72"></canvas>
+          <span class="wave-preview-cap" id="wavePreviewCap">此卦心音 · 波形预览</span>
+        </div>
+
+        <div class="gen-now" id="genNow">
+          <span class="gen-sec" id="genSec">起</span>
+          <span class="gen-sec-name" id="genSecName">卦音一击，确立调式</span>
+          <span class="gen-round" id="genRound">即兴第 1 段</span>
+        </div>
+
+        <div class="player-controls">
+          <button class="btn btn-play" id="btnPlay">
+            <span id="btnPlayIcon" class="play-icon">▶</span>
+            <span id="btnPlayText">播放</span>
+          </button>
+          <button class="btn btn-ghost btn-solf" id="btnSolf" aria-pressed="false"
+                  title="疗愈音层：以索菲吉奥频率（当代音疗流派所用）在五声之下极轻铺底，可随时关闭；非古律，亦不涉疗效">
+            <span class="solf-icon">◍</span>
+            <span id="btnSolfText">疗愈音层</span>
+          </button>
+          <button class="btn btn-ghost btn-sm" id="btnLoop" aria-pressed="false" title="循环：反复播放当前这一段，不再另编新段">
+            <span class="loop-icon">⟲</span><span id="btnLoopText">循环</span>
+          </button>
+          <button class="btn btn-ghost" id="btnExport">导出 WAV</button>
+          <div class="volume">
+            <span class="vol-icon">🔊</span>
+            <input type="range" id="volume" min="0" max="100" value="85">
+          </div>
+        </div>
+
+        <p class="player-tip" id="playerTip">此音依卦象实时生成：每一段都是新的编舞，绵延不绝。点击播放开始。</p>
+      </div>
+
+      <!-- 音层：疗愈频率（索菲吉奥九频）+ 自然音层（可选叠加） -->
+      <div class="glass-card hidden" id="ambientCard">
+        <div class="card-head">
+          <h2>音层</h2>
+          <span class="amb-note">可选叠加 · 不涉疗效</span>
+        </div>
+        <p class="panel-desc">
+          五声之本不变，另可在其下叠加现代聆听元素。
+          <b>疗愈频率</b>取「索菲吉奥」九频 —— 当代音疗流派所用，非古律，可选其一或关闭；
+          <b>自然音层</b>（雨声 / 鸟鸣 / 篝火 / 风声 / 溪流）由合成引擎实时生成，可多选叠加。
+        </p>
+
+        <div class="amb-group">
+          <div class="amb-group-head">
+            <span class="amb-group-title">疗愈频率 · 索菲吉奥九频</span>
+            <button class="amb-clear" id="ambSolfClear" type="button">关闭</button>
+          </div>
+          <div class="amb-chips" id="ambSolfChips"></div>
+          <p class="amb-intro" id="ambSolfIntro"></p>
+        </div>
+
+        <div class="amb-group">
+          <div class="amb-group-head">
+            <span class="amb-group-title">自然音层 · 可多选</span>
+          </div>
+          <div class="amb-chips" id="ambNatureChips"></div>
+          <p class="amb-intro" id="ambNatureIntro">点选叠加，再点取消；各层音量见下。</p>
+        </div>
+
+        <div class="amb-volume">
+          <span class="amb-vol-icon">◍</span>
+          <input type="range" id="ambLevel" min="0" max="100" value="100" aria-label="音层总量">
+          <span class="amb-level-num" id="ambLevelNum">100%</span>
+        </div>
+        <p class="amb-foot">
+          ※ 音层皆为聆听氛围的可选元素：索菲吉奥频率系当代说法，非中国古代音律，亦不涉疗效；
+          自然音层为程序合成，非录音素材。全部关闭时，播放与纯净五声逐位一致。
+        </p>
+      </div>
+
+      <!-- 乐器园：八音介绍 + 试听 -->
+      <div class="glass-card" id="instrumentCard">
+        <div class="card-head">
+          <h2>乐器园 · 八音</h2>
+          <span class="ih-note">可试听</span>
+        </div>
+        <p class="panel-desc">
+          八音之材，各配一卦（《白虎通·礼乐》引《乐记》）。点「试听」，
+          即可听到本应用合成引擎演绎的乐器音色 —— 与起卦后所用音色同一套合成器。
+        </p>
+        <div class="inst-grid" id="instGrid"></div>
+        <p class="inst-foot" id="instFoot"></p>
+      </div>
+
+    </section>
+
+    <!-- ==================================================
+         页三 · 学易（易经知识学习）
+         ================================================== -->
+    <section class="page" id="pageLearn">
+      <div class="learn-wrap" id="learnWrap"></div>
+    </section>
+
+    <!-- ============ 免责 ============ -->
+    <footer class="disclaimer">
+      <p>
+        本应用以《周易》卦象与古代律吕文化为灵感，生成供个人赏析与静心的音乐，
+        <strong>属传统文化与艺术创作，不含任何预测功效</strong>。
+        五音之说是传统音乐与养生观念，非现代医学结论，不可替代医疗与专业建议。
+      </p>
+    </footer>
+
+  </main>
+
+  <!-- ============ 底部玻璃标签栏 ============ -->
+  <nav class="tabbar" id="tabbar">
+    <button class="tabbtn is-active" data-page="cast" aria-current="page">
+      <svg viewBox="0 0 24 24" class="tb-icon" aria-hidden="true">
+        <rect x="3" y="4.5" width="18" height="2.4" rx="1.2"/>
+        <rect x="3" y="10.8" width="7.2" height="2.4" rx="1.2"/>
+        <rect x="13.8" y="10.8" width="7.2" height="2.4" rx="1.2"/>
+        <rect x="3" y="17.1" width="18" height="2.4" rx="1.2"/>
+      </svg>
+      <span>起卦</span>
+    </button>
+    <button class="tabbtn" data-page="music">
+      <svg viewBox="0 0 24 24" class="tb-icon" aria-hidden="true">
+        <ellipse cx="6.9" cy="16.6" rx="3.2" ry="2.5" transform="rotate(-16 6.9 16.6)"/>
+        <ellipse cx="17.3" cy="14.4" rx="3.2" ry="2.5" transform="rotate(-16 17.3 14.4)"/>
+        <rect x="9.7" y="4.6" width="1.7" height="12.3" rx="0.85"/>
+        <rect x="20.1" y="3" width="1.7" height="11.7" rx="0.85"/>
+        <path d="M9.7 4.6 L21.8 3 L21.8 6.8 C17.6 5.5 13 7 9.7 8.8 Z"/>
+      </svg>
+      <span>音乐</span>
+    </button>
+    <button class="tabbtn" data-page="learn">
+      <svg viewBox="0 0 24 24" class="tb-icon" aria-hidden="true">
+        <path d="M12 5.6C10.2 4.2 7.6 3.7 4.5 4.2v14c3.1-.5 5.7 0 7.5 1.4 1.8-1.4 4.4-1.9 7.5-1.4v-14c-3.1-.5-5.7 0-7.5 1.4z"/>
+        <path d="M12 5.6v14" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      <span>学易</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- 加载顺序要求：
+     1. require-shim.js —— 注入浏览器端 require 垫子（必须最先）
+     2. bootstrap.js   —— 跨端加载器
+     3. classics.js    —— 文献依据的单一真相源（不依赖其他 core 模块）
+     4. data.js        —— 依赖 classics.js，导出 window.ICData
+     5. hexagram.js / music.js / render.js / player.js / recognize.js / vision.js -->
+<script src="core/require-shim.js"></script>
+<script src="core/bootstrap.js"></script>
+<script src="core/classics.js"></script>
+<script src="core/data.js"></script>
+<script src="core/hexagram-texts.js"></script>
+<script src="core/hexagram.js"></script>
+<script src="core/music.js"></script>
+<script src="core/render.js"></script>
+<script src="core/player.js"></script>
+<script src="core/recognize.js"></script>
+<script src="core/vision.js"></script>
+<script src="js/learn.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

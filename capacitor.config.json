@@ -1,0 +1,26 @@
+{
+  "appId": "com.guaxiang.xinyin",
+  "appName": "卦象心音",
+  "webDir": "web",
+  "bundledWebRuntime": false,
+  "loggingBehavior": "none",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "contentInset": "always",
+    "limitsNavigationsToAppBoundDomains": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "backgroundColor": "#F5F0E6",
+      "showSpinner": false,
+      "androidSpinnerStyle": "small",
+      "splashFullScreen": true,
+      "splashImmersive": false
+    }
+  }
+}

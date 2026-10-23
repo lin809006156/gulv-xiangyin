@@ -1,0 +1,37 @@
+<!-- 底部玻璃胶囊标签栏：图标用矢量块拼出（不依赖图片资源） -->
+<view class="tabbar-wrap">
+  <view class="tabbar">
+    <view
+      class="tabitem {{selected === index ? 'is-on' : ''}}"
+      wx:for="{{list}}"
+      wx:key="pagePath"
+      data-index="{{index}}"
+      data-path="{{item.pagePath}}"
+      bindtap="onTap"
+    >
+      <view class="tb-ico">
+        <block wx:if="{{index === 0}}">
+          <!-- 起卦：三爻 -->
+          <view class="tb-shape">
+            <view class="tb-line" wx:for="{{[0,1,2]}}" wx:key="*this" style="top: {{index * 9}}rpx;"></view>
+          </view>
+        </block>
+        <block wx:elif="{{index === 1}}">
+          <!-- 音乐：符头 + 干 -->
+          <view class="tb-shape tb-music">
+            <view class="tb-note"></view>
+            <view class="tb-stem"></view>
+          </view>
+        </block>
+        <block wx:else>
+          <!-- 学易：书册 -->
+          <view class="tb-shape tb-book">
+            <view class="tb-page"></view>
+            <view class="tb-spine"></view>
+          </view>
+        </block>
+      </view>
+      <text class="tb-txt">{{item.text}}</text>
+    </view>
+  </view>
+</view>

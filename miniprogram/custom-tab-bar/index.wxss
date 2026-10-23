@@ -1,0 +1,50 @@
+/* 底部玻璃胶囊标签栏（与网页版同款：悬浮、半透明、圆角胶囊） */
+.tabbar-wrap {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(24rpx + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 90;
+}
+.tabbar {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  width: 600rpx;
+  padding: 10rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(160deg, rgba(255,254,250,.92), rgba(252,249,242,.70));
+  border: 1rpx solid rgba(178,160,132,.22);
+  box-shadow: 0 2rpx 0 rgba(255,255,255,.8) inset,
+              0 20rpx 60rpx rgba(58,48,34,.16);
+}
+.tabitem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+  padding: 14rpx 0 12rpx;
+  border-radius: 999rpx;
+  color: var(--ink-3);
+  transition: background .22s ease, color .22s ease, transform .2s cubic-bezier(.2,.9,.25,1.1);
+}
+.tabitem.is-on {
+  color: var(--cinnabar);
+  background: linear-gradient(170deg, rgba(255,255,255,.95), rgba(255,255,255,.60));
+  box-shadow: 0 2rpx 0 rgba(255,255,255,.9) inset, 0 8rpx 22rpx rgba(58,48,34,.12);
+}
+.tabitem:active { transform: scale(.95); }
+.tb-ico {
+  width: 44rpx; height: 44rpx;
+  display: flex; align-items: center; justify-content: center;
+}
+.tb-ico .tb-shape { width: 34rpx; height: 30rpx; }
+.tb-txt {
+  font-size: 21rpx;
+  font-weight: 600;
+  letter-spacing: .1em;
+}

@@ -1,0 +1,87 @@
+<!-- 音乐页：当前心音 + 波形台 + 播放控制 + 乐器园 -->
+<import src="../../templates/miniplayer.wxml" />
+<view class="mp-page">
+
+  <!-- 当前心音 -->
+  <view class="glass-card">
+    <block wx:if="{{hasResult}}">
+      <view class="mn-head">
+        <text class="mn-symbol">{{symbol}}</text>
+        <view class="mn-title">
+          <text class="mn-name">{{name}}</text>
+          <text class="mn-meta">{{structure}} · {{virtue}}</text>
+        </view>
+      </view>
+      <view class="mn-params">
+        <view class="mp" wx:for="{{musicParams}}" wx:key="label">
+          <text class="mp-label">{{item.label}}</text>
+          <text class="mp-value">{{item.value}}</text>
+          <text class="mp-sub" wx:if="{{item.sub}}">{{item.sub}}</text>
+        </view>
+      </view>
+    </block>
+    <block wx:else>
+      <view class="me-icon">☯</view>
+      <text class="me-title">还没有卦象之音</text>
+      <text class="me-desc">先在「起卦」栏取一卦，这里就会出现属于它的心音。</text>
+      <view class="btn btn-ghost btn-sm" bindtap="goCast">去起一卦</view>
+    </block>
+  </view>
+
+  <!-- 播放器：即兴连播 -->
+  <view class="glass-card" wx:if="{{hasResult}}">
+    <view class="card-head">
+      <text class="ch-title">心音</text>
+      <view class="gen-live" wx:if="{{isPlaying}}">
+        <view class="live-dot"></view>
+        <text class="live-txt">{{liveText}}</text>
+      </view>
+    </view>
+
+    <view class="viz-wrap">
+      <canvas type="2d" id="viz" class="viz"></canvas>
+    </view>
+
+    <view class="player-controls">
+      <view class="btn btn-primary btn-play" bindtap="togglePlay">
+        <text class="pc-ico">{{isPlaying ? '❚❚' : '▶'}}</text>
+        <text>{{isPlaying ? '暂停' : (paused ? '继续' : '播放')}}</text>
+      </view>
+      <view class="btn btn-ghost btn-sm" bindtap="toggleLoop">
+        <text class="pc-ico">⟲</text>
+        <text>{{loopOn ? '循环中' : '循环'}}</text>
+      </view>
+      <view class="vol">
+        <text class="vol-ico">◍</text>
+        <slider class="vol-slider" min="0" max="100" value="{{volume}}" activeColor="#B23A2E"
+                backgroundColor="rgba(178,160,132,.22)" block-size="16" block-color="#B23A2E"
+                bindchanging="onVolume" bindchange="onVolume" />
+      </view>
+    </view>
+    <text class="panel-note">{{playerTip}}</text>
+  </view>
+
+  <!-- 乐器园：八音 -->
+  <view class="glass-card">
+    <view class="card-head">
+      <text class="ch-title">乐器园 · 八音</text>
+      <text class="ch-note">可试听</text>
+    </view>
+    <text class="panel-desc">八音之材，各配一卦（《白虎通·礼乐》引《乐记》）。点「试听」，即听到该乐器在五声内的一段短句 —— 与起卦后的主奏音色同一套合成器。</text>
+    <view class="inst-grid">
+      <view class="inst" wx:for="{{instruments}}" wx:key="key">
+        <view class="inst-top">
+          <text class="inst-name">{{item.name}}</text>
+          <text class="inst-tag">{{item.guaName}}</text>
+        </view>
+        <text class="inst-desc">{{item.desc}}</text>
+        <text class="inst-cite">{{item.cite}}</text>
+        <view class="btn btn-ghost btn-sm inst-btn {{playingKey === item.key ? 'is-on' : ''}}"
+              data-key="{{item.key}}" bindtap="audition">{{playingKey === item.key ? '停止' : '试听'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <template is="miniplayer" data="{{m: mini}}" />
+  <view class="page-pad {{isPlaying ? 'has-mini' : ''}}"></view>
+</view>

@@ -4,7 +4,7 @@
  * 启动时做三件事：
  *   1. 记录首次启动时间（用于"每日一卦"的初始化）
  *   2. 预热核心模块（起卦、作曲），让首页打开即用
- *   3. 注入全局工具
+ *   3. 维护全局播放状态，浮动播放条据此同步
  */
 
 'use strict';
@@ -26,10 +26,18 @@ function topPage() {
 
 App({
   globalData: {
-    // 起卦结果暂存：从首页跳转到详情页时传递
+    // 起卦结果暂存：各页共享（音乐页据此取卦象与心音）
     currentResult: null,
     currentScore: null,
     player: null,
+
+    /**
+     * 播放状态（浮动播放条与各页共享）
+     * isPlaying 是否在播；paused 是否被用户挂起；loopOn 循环；
+     * title 曲名；subtitle 状态文案
+     */
+    ui: { isPlaying: false, paused: false, loopOn: false, title: '心音', subtitle: '即兴中' },
+    _uiListeners: [],
 
     /**
      * 云开发环境 ID（预留，当前版本未使用云开发）。
@@ -56,6 +64,7 @@ App({
         if (top && top.onPlayerProgress) top.onPlayerProgress(elapsed, duration);
       },
       onEnd: () => {
+        this.setUi({ isPlaying: false, paused: false, subtitle: '已止' });
         const top = topPage();
         if (top && top.onPlayerEnd) top.onPlayerEnd();
       },
@@ -86,5 +95,27 @@ App({
 
   onError(err) {
     console.error('小程序异常', err);
+  },
+
+  /**
+   * 更新全局播放状态并通知各页（浮动播放条据此刷新）
+   */
+  setUi(patch) {
+    const ui = Object.assign({}, this.globalData.ui, patch);
+    this.globalData.ui = ui;
+    const ls = this.globalData._uiListeners || [];
+    for (let i = 0; i < ls.length; i++) {
+      try { ls[i](ui); } catch (e) { /* 单个页面出错不影响其它 */ }
+    }
+  },
+
+  /** 页面注册播放状态监听（返回取消函数） */
+  onUiChange(fn) {
+    const ls = this.globalData._uiListeners || (this.globalData._uiListeners = []);
+    ls.push(fn);
+    return () => {
+      const i = ls.indexOf(fn);
+      if (i >= 0) ls.splice(i, 1);
+    };
   }
 });

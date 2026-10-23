@@ -1,6 +1,8 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/music/music",
+    "pages/learn/learn",
     "pages/detail/detail",
     "pages/calendar/calendar"
   ],
@@ -12,6 +14,7 @@
     "backgroundColor": "#F5F0E6"
   },
   "tabBar": {
+    "custom": true,
     "color": "#8A8175",
     "selectedColor": "#B23A2E",
     "backgroundColor": "#F5F0E6",
@@ -22,8 +25,12 @@
         "text": "起卦"
       },
       {
-        "pagePath": "pages/calendar/calendar",
-        "text": "卦历"
+        "pagePath": "pages/music/music",
+        "text": "音乐"
+      },
+      {
+        "pagePath": "pages/learn/learn",
+        "text": "学易"
       }
     ]
   },

@@ -1,0 +1,141 @@
+/* 学易页 */
+.lp-page { padding-top: 20rpx; }
+
+.lp-intro {
+  margin: 0 24rpx 20rpx;
+  padding: 24rpx 26rpx;
+  border-radius: 24rpx;
+  background: rgba(255,255,255,.5);
+  border: 1rpx solid rgba(178,160,132,.16);
+  font-size: 24rpx;
+  color: var(--ink-3);
+  line-height: 1.8;
+}
+
+/* ---------- 易之生成 ---------- */
+.gen-flow { display: flex; align-items: center; gap: 8rpx; flex-wrap: wrap; margin: 10rpx 0 4rpx; }
+.gen-node {
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  font-size: 23rpx;
+  color: var(--ink-2);
+  background: rgba(255,255,255,.6);
+  border: 1rpx solid rgba(178,160,132,.2);
+}
+.gen-arrow { color: var(--ink-4); font-size: 22rpx; }
+.taiji {
+  width: 150rpx; height: 150rpx;
+  position: relative;
+  margin: 18rpx auto 8rpx;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #23201B 0%, #23201B 50%, #F7F2E8 50%, #F7F2E8 100%);
+  border: 1rpx solid rgba(35,32,27,.35);
+  overflow: hidden;
+}
+.taiji::before {
+  content: "";
+  position: absolute;
+  left: 50%; top: 0;
+  width: 50%; height: 50%;
+  transform: translateX(-50%);
+  border-radius: 0 0 50% 50%;
+  background: #F7F2E8;
+}
+.taiji::after {
+  content: "";
+  position: absolute;
+  left: 50%; bottom: 0;
+  width: 50%; height: 50%;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 0 0;
+  background: #23201B;
+}
+.taiji .dot-dark, .taiji .dot-light {
+  position: absolute; left: 50%;
+  width: 20rpx; height: 20rpx; margin-left: -10rpx;
+  border-radius: 50%;
+}
+.taiji .dot-dark { top: 25%; background: #23201B; }
+.taiji .dot-light { bottom: 25%; background: #F7F2E8; }
+.taiji-cap { text-align: center; font-size: 22rpx; color: var(--ink-4); }
+
+/* 四象（用矩形拼，不用字体字形） */
+.sixiang { display: flex; gap: 16rpx; justify-content: center; margin: 16rpx 0; }
+.sx { width: 120rpx; }
+.sx-fig { height: 96rpx; position: relative; }
+.sx-fig .r { position: absolute; background: #23201B; border-radius: 3rpx; }
+.sx-fig .r.solid { left: 0; right: 0; top: 26rpx; height: 18rpx; }
+.sx-fig .r.solid2 { left: 0; right: 0; top: 56rpx; height: 18rpx; }
+.sx-fig .r.broken { left: 0; width: 42%; top: 26rpx; height: 18rpx; }
+.sx-fig .r.broken2 { right: 0; width: 42%; top: 26rpx; height: 18rpx; }
+.sx-fig .r.broken3 { left: 0; width: 42%; top: 56rpx; height: 18rpx; }
+.sx-fig .r.broken4 { right: 0; width: 42%; top: 56rpx; height: 18rpx; }
+.sx-name { text-align: center; font-size: 22rpx; color: var(--ink-3); margin-top: 8rpx; }
+
+/* ---------- 八卦速查 ---------- */
+.tri-grid { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 8rpx; }
+.tri {
+  width: calc(25% - 9rpx);
+  padding: 14rpx 8rpx;
+  border-radius: 18rpx;
+  background: rgba(255,255,255,.55);
+  border: 1rpx solid rgba(178,160,132,.16);
+  text-align: center;
+}
+.tri-sym { font-size: 40rpx; line-height: 1.1; color: var(--ink); }
+.tri-name { font-size: 24rpx; font-weight: 700; margin-top: 4rpx; }
+.tri-nat { font-size: 19rpx; color: var(--ink-4); }
+.tri-img { font-size: 18rpx; color: var(--ink-4); margin-top: 4rpx; line-height: 1.4; }
+
+/* ---------- 六十四卦 ---------- */
+.hex-tools { display: flex; gap: 12rpx; margin: 10rpx 0 16rpx; }
+.hex-tools input {
+  flex: 1;
+  height: 68rpx;
+  padding: 0 20rpx;
+  border-radius: 999rpx;
+  background: rgba(255,255,255,.6);
+  border: 1rpx solid rgba(178,160,132,.22);
+  font-size: 24rpx;
+}
+.hex-grid { display: flex; flex-wrap: wrap; gap: 8rpx; }
+.hex-cell {
+  width: calc(12.5% - 7rpx);
+  padding: 10rpx 0;
+  border-radius: 12rpx;
+  background: rgba(255,255,255,.5);
+  border: 1rpx solid rgba(178,160,132,.14);
+  text-align: center;
+}
+.hex-cell .hc-sym { font-size: 26rpx; line-height: 1.2; }
+.hex-cell .hc-name { font-size: 18rpx; color: var(--ink-3); }
+
+/* ---------- 按上下卦找卦 ---------- */
+.finder-row { display: flex; gap: 12rpx; align-items: center; margin: 12rpx 0; }
+.finder-row .fl { font-size: 24rpx; color: var(--ink-3); flex: none; }
+.picker {
+  flex: 1; height: 68rpx; line-height: 68rpx;
+  padding: 0 20rpx;
+  border-radius: 999rpx;
+  background: rgba(255,255,255,.6);
+  border: 1rpx solid rgba(178,160,132,.22);
+  font-size: 24rpx;
+}
+.finder-out { margin-top: 12rpx; font-size: 25rpx; color: var(--ink-2); }
+.finder-out .fo-sym { font-size: 40rpx; color: var(--cinnabar); margin-right: 12rpx; }
+
+/* ---------- 表格（五音、十二律、八音配卦） ---------- */
+.tbl { margin-top: 10rpx; }
+.tbl-row {
+  display: flex;
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid var(--line-soft);
+  font-size: 24rpx;
+  color: var(--ink-2);
+  align-items: baseline;
+}
+.tbl-row:last-child { border-bottom: none; }
+.tbl-row .t1 { flex: none; width: 130rpx; font-weight: 600; color: var(--ink); }
+.tbl-row .t2 { flex: none; width: 110rpx; color: var(--cinnabar); }
+.tbl-row .t3 { flex: 1; color: var(--ink-3); font-size: 23rpx; }
+.tbl-head .t1, .tbl-head .t2, .tbl-head .t3 { color: var(--ink-4); font-size: 21rpx; font-weight: 600; letter-spacing: .06em; }

@@ -1,0 +1,13 @@
+<template name="miniplayer">
+  <view class="miniplayer" wx:if="{{m.isPlaying}}">
+    <view class="mp-wave">
+      <view class="w1"></view><view class="w2"></view><view class="w3"></view><view class="w4"></view>
+    </view>
+    <view class="mp-info" bindtap="miniGoMusic">
+      <text class="mp-title">{{m.title}}</text>
+      <text class="mp-sub">{{m.subtitle}}</text>
+    </view>
+    <view class="mp-btn mp-play" bindtap="miniPlay">{{m.paused ? '▶' : '❚❚'}}</view>
+    <view class="mp-btn {{m.loopOn ? 'is-on' : ''}}" bindtap="miniLoop">⟲</view>
+  </view>
+</template>

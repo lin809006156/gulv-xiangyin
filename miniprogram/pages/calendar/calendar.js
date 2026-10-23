@@ -12,12 +12,16 @@ const M = require('../../core/music.js');
 const store = require('../../utils/storage.js');
 
 const app = getApp();
+const mini = require('../../utils/miniplayer.js');
 
 Page({
+  ...mini.methods,
   data: {
     list: [],
     empty: true
   },
+
+  onUnload() { this.miniUnbind(); },
 
   onShow() {
     this.refresh();

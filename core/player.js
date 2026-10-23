@@ -1324,6 +1324,28 @@ class Player {
   }
 
   /** 用户是否主动按下了暂停 */
+  /**
+   * 当前即兴轮的播放位置与乐谱
+   * ---------------------------------------------------------------
+   * 供可视化取用：小程序端没有 AnalyserNode，频谱与波形改由
+   * 乐谱（score.notes）按当前播放位置推算 —— 既确定又不失真。
+   */
+  get genPos() {
+    const g = this._gen;
+    if (!g || !g.rounds || !g.rounds.length) return null;
+    const now = this._ctx ? this._ctx.currentTime : 0;
+    const r = g.rounds.find((x) => now >= x.startAt && now < x.endAt)
+      || g.rounds[g.rounds.length - 1];
+    if (!r) return null;
+    return {
+      round: r.round,
+      elapsed: Math.max(0, Math.min(r.pcm.duration, now - r.startAt)),
+      duration: r.pcm.duration,
+      score: r.score,
+      arcName: r.arcName || null
+    };
+  }
+
   get paused() {
     return !!this._paused;
   }

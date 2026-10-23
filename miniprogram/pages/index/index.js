@@ -13,8 +13,10 @@ const M = require('../../core/music.js');
 const store = require('../../utils/storage.js');
 
 const app = getApp();
+const mini = require('../../utils/miniplayer.js');
 
 Page({
+  ...mini.methods,
   data: {
     // 起卦方式
     mode: 'daily',
@@ -65,11 +67,15 @@ Page({
   },
 
   onLoad() {
+    this.miniBind();
     this.initData();
     this.castDaily();
   },
 
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setSelected(0);
+    }
     // 从详情页返回时同步播放状态
     const p = app.globalData.player;
     if (p) {
@@ -77,7 +83,7 @@ Page({
     }
   },
 
-  onUnload() {
+  onUnload() { this.miniUnbind();
     // 离开首页不停止播放，允许跨页续听
   },
 
@@ -341,13 +347,24 @@ Page({
   },
 
   goCalendar() {
-    wx.switchTab({ url: '/pages/calendar/calendar' });
+    wx.navigateTo({ url: '/pages/calendar/calendar' });
   },
 
   shareApp() {
     const name = this.data.name || '古律象音';
     wx.showShareMenu({ withShareTicket: true, menus: ['shareAppMessage'] });
   },
+
+  /** 去音乐栏 */
+  goMusic() {
+    wx.switchTab({ url: '/pages/music/music' });
+  },
+
+  /** 去学易栏 */
+  goLearn() {
+    wx.switchTab({ url: '/pages/learn/learn' });
+  },
+
 
   onShareAppMessage() {
     const name = this.data.name || '古律象音';

@@ -1,4 +1,5 @@
 <!-- 古律象音 · 首页 -->
+<import src="../../templates/miniplayer.wxml" />
 <view class="page">
 
   <!-- ============ 顶部 ============ -->
@@ -151,39 +152,20 @@
     <view class="btn btn-ghost detail-btn" bindtap="goDetail">查看卦象详解</view>
   </view>
 
-  <!-- ============ 播放器 ============ -->
+  <!-- ============ 去音乐栏 ============ -->
   <view wx:if="{{hasResult}}" class="card">
     <view class="card-head">
       <text class="title">心音</text>
       <text class="player-time">{{playerTime}}</text>
     </view>
-
-    <view class="progress-wrap">
-      <view class="progress-track">
-        <view class="progress-fill" style="width: {{progressPercent}}%"></view>
-        <view class="progress-sections">
-          <text
-            wx:for="{{sections}}"
-            wx:key="label"
-            class="prog-sec"
-            style="left: {{item.left}}%"
-          >{{item.label}}</text>
-        </view>
-      </view>
-    </view>
-
     <view class="player-controls">
-      <view class="btn btn-play" bindtap="togglePlay">
-        <text class="play-icon">{{isPlaying ? '❚❚' : '▶'}}</text>
-        <text>{{isPlaying ? '停止' : '播放'}}</text>
-      </view>
-      <view class="btn btn-ghost btn-sm btn-loop {{loopOn ? 'on' : ''}}" bindtap="toggleLoop">
-        <text class="loop-icon">🔁</text>
-        <text>循环</text>
+      <view class="btn btn-play" bindtap="goMusic">
+        <text class="play-icon">♪</text>
+        <text>去音乐栏</text>
       </view>
       <view class="btn btn-ghost btn-sm" bindtap="goCalendar">卦历</view>
+      <view class="btn btn-ghost btn-sm" bindtap="goLearn">学易</view>
     </view>
-
     <text class="player-tip">{{playerTip}}</text>
   </view>
 
@@ -194,4 +176,5 @@
     <text>五音之说是传统音乐与养生观念，非现代医学结论，不可替代医疗与专业建议。</text>
   </view>
 
+  <template is="miniplayer" data="{{m: mini}}" />
 </view>

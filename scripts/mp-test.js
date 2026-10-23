@@ -324,8 +324,57 @@ navCalls.length = 0;
 index.goDetail();
 assert(navCalls.some((c) => c.type === 'navigateTo' && c.url.includes('detail')), '跳转到详情页');
 index.goCalendar();
-assert(navCalls.some((c) => c.type === 'switchTab'), '跳转到卦历页');
+assert(navCalls.some((c) => c.type === 'navigateTo' && c.url.includes('calendar')), '跳转到卦历页（非 tab 页，用 navigateTo）');
+index.goMusic();
+assert(navCalls.some((c) => c.type === 'switchTab' && c.url.includes('music')), '可去音乐栏（tab 页，用 switchTab）');
+index.goLearn();
+assert(navCalls.some((c) => c.type === 'switchTab' && c.url.includes('learn')), '可去学易栏');
 
+
+console.log('\n【11】音乐页与学易页');
+pageStack.length = 0;
+currentPage = null;
+loadModule('pages/music/music.js');
+const music = currentPage;
+music.onLoad();
+music.syncResult();
+assert(!!music.data.musicParams && music.data.musicParams.length === 6, '音乐页：六项音乐参数');
+assert(music.data.instruments.length === 8, `乐器园八音齐备（实得 ${music.data.instruments.length}）`);
+assert(music.data.instruments[0].name && music.data.instruments[0].guaName, '乐器条目含名称与所配卦');
+assert(!!music.data.mini, '音乐页挂上浮动播放条状态');
+
+pageStack.length = 0;
+currentPage = null;
+loadModule('pages/learn/learn.js');
+const learn = currentPage;
+learn.onLoad();
+assert(learn.data.trigrams.length === 8, '学易页：八卦速查八条');
+assert(learn.data.hexList.length === 64, `六十四卦全表（实得 ${learn.data.hexList.length}）`);
+assert(learn.data.fiveTones.length === 5, '五音五条');
+assert(learn.data.twelveLv.length === 12, '十二律十二条');
+assert(learn.data.eightTone.length === 8, '八音配卦八条');
+assert(learn.data.books.length >= 4, '所据典籍已列');
+learn.setData({ hexKw: '泰' });
+learn.onHexSearch({ detail: { value: '泰' } });
+assert(learn.data.hexList.length >= 1, `搜「泰」有结果（${learn.data.hexList.length} 条）`);
+learn.onUpper({ detail: { value: 0 } });
+learn.onLower({ detail: { value: 0 } });
+assert(!!learn.data.found, '按上下卦找卦：上乾下乾 → 乾');
+
+console.log('\n【11b】波形台模块（小程序版）');
+const stageMod = loadInternal('viz/stage.js');
+assert(!!stageMod.createStage, '波形台模块可加载');
+const spec = stageMod.spectrumFromScore({
+  notes: [{ time: 0, dur: 1, midi: 60, vel: 1 }, { time: 0, dur: 1, midi: 72, vel: 0.8 }]
+}, 0.5, 48);
+assert(spec.length === 48, '频谱推算：48 段');
+let mx = 0;
+for (let i = 0; i < spec.length; i++) if (spec[i] > mx) mx = spec[i];
+assert(mx > 0.5, `频谱由乐谱推算有值（峰值 ${mx.toFixed(2)}）`);
+const spec2 = stageMod.spectrumFromScore({ notes: [{ time: 0, dur: 1, midi: 60, vel: 1 }] }, 9, 48);
+let mx2 = 0;
+for (let i = 0; i < spec2.length; i++) if (spec2[i] > mx2) mx2 = spec2[i];
+assert(mx2 === 0, '播放位置之外无能量');
 
 console.log('\n【11】导航补充');
 navCalls.length = 0;

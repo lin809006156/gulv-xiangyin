@@ -12,8 +12,10 @@ const M = require('../../core/music.js');
 const store = require('../../utils/storage.js');
 
 const app = getApp();
+const mini = require('../../utils/miniplayer.js');
 
 Page({
+  ...mini.methods,
   data: {
     hasResult: false,
     symbol: '',
@@ -45,8 +47,11 @@ Page({
   },
 
   onLoad() {
+    this.miniBind();
     this.loadResult();
   },
+
+  onUnload() { this.miniUnbind(); },
 
   onShow() {
     this.loadResult();

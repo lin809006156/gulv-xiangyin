@@ -1,0 +1,211 @@
+<!-- 学易页：八章，折叠展开。内容全部取自 core，与网页版同源 -->
+<view class="lp-page">
+
+  <view class="lp-intro">
+    易学不是玄谈，是一套**取象**的方法：立象 → 尽意 → 明理。本栏把本应用用到的义理与出处逐条列出，可查、可核。
+  </view>
+
+  <!-- 一、易之生成 -->
+  <view class="lsec {{open.origin ? 'is-open' : ''}}" bindtap="toggle" data-key="origin">
+    <view class="lsec-head">
+      <text class="lsec-no">一</text>
+      <text>易之生成</text>
+      <text class="lsec-arrow">›</text>
+    </view>
+    <view class="lsec-body" wx:if="{{open.origin}}">
+      <view class="taiji"><text class="dot-dark"></text><text class="dot-light"></text></view>
+      <view class="taiji-cap">太极：动而生两仪</view>
+      <view class="gen-flow">
+        <text class="gen-node">太极</text><text class="gen-arrow">→</text>
+        <text class="gen-node">两仪（阴阳）</text><text class="gen-arrow">→</text>
+        <text class="gen-node">四象</text><text class="gen-arrow">→</text>
+        <text class="gen-node">八卦</text><text class="gen-arrow">→</text>
+        <text class="gen-node">六十四卦</text>
+      </view>
+      <text class="lb-title">四象</text>
+      <view class="sixiang">
+        <view class="sx" wx:for="{{siXiang}}" wx:key="name">
+          <view class="sx-fig">
+            <block wx:if="{{item.broken}}">
+              <view class="r broken"></view><view class="r broken2"></view>
+              <view class="r broken3"></view><view class="r broken4"></view>
+            </block>
+            <block wx:else>
+              <view class="r solid"></view><view class="r solid2"></view>
+            </block>
+          </view>
+          <view class="sx-name">{{item.name}}</view>
+        </view>
+      </view>
+      <text class="lb-note">《系辞》：「易有太极，是生两仪，两仪生四象，四象生八卦。」</text>
+    </view>
+  </view>
+
+  <!-- 二、八卦速查 -->
+  <view class="lsec {{open.trigrams ? 'is-open' : ''}}" bindtap="toggle" data-key="trigrams">
+    <view class="lsec-head">
+      <text class="lsec-no">二</text>
+      <text>八卦速查</text>
+      <text class="lsec-arrow">›</text>
+    </view>
+    <view class="lsec-body" wx:if="{{open.trigrams}}">
+      <view class="tri-grid">
+        <view class="tri" wx:for="{{trigrams}}" wx:key="key">
+          <view class="tri-sym">{{item.symbol}}</view>
+          <view class="tri-name">{{item.name}}</view>
+          <view class="tri-nat">{{item.nature}}·{{item.wuxing}}</view>
+          <view class="tri-img">{{item.image}}</view>
+        </view>
+      </view>
+      <text class="lb-note">物象与卦德取自《说卦传》；「万物类象」一节为本应用取卦的依据。</text>
+    </view>
+  </view>
+
+  <!-- 三、六十四卦 -->
+  <view class="lsec {{open.hex64 ? 'is-open' : ''}}" bindtap="toggle" data-key="hex64">
+    <view class="lsec-head">
+      <text class="lsec-no">三</text>
+      <text>六十四卦全表</text>
+      <text class="lsec-arrow">›</text>
+    </view>
+    <view class="lsec-body" wx:if="{{open.hex64}}">
+      <view class="hex-tools">
+        <input placeholder="搜索卦名，如：泰 / 既济" value="{{hexKw}}" bindinput="onHexSearch" />
+      </view>
+      <view class="hex-grid">
+        <view class="hex-cell" wx:for="{{hexList}}" wx:key="n" data-n="{{item.n}}" bindtap="goDetail">
+          <view class="hc-sym">{{item.symbol}}</view>
+          <view class="hc-name">{{item.name}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 四、按上下卦找卦 -->
+  <view class="lsec {{open.finder ? 'is-open' : ''}}" bindtap="toggle" data-key="finder">
+    <view class="lsec-head">
+      <text class="lsec-no">四</text>
+      <text>按上下卦找卦</text>
+      <text class="lsec-arrow">›</text>
+    </view>
+    <view class="lsec-body" wx:if="{{open.finder}}">
+      <view class="finder-row">
+        <text class="fl">上卦</text>
+        <picker range="{{triNames}}" value="{{upperIdx}}" bindchange="onUpper">
+          <view class="picker">{{triNames[upperIdx]}}</view>
+        </picker>
+      </view>
+      <view class="finder-row">
+        <text class="fl">下卦</text>
+        <picker range="{{triNames}}" value="{{lowerIdx}}" bindchange="onLower">
+          <view class="picker">{{triNames[lowerIdx]}}</view>
+        </picker>
+      </view>
+      <view class="finder-out" wx:if="{{found}}">
+        <text class="fo-sym">{{found.symbol}}</text>
+        <text>{{found.name}}　{{found.xiang}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 五、起卦与卜筮 -->
+  <view class="lsec {{open.divination ? 'is-open' : ''}}" bindtap="toggle" data-key="divination">
+    <view class="lsec-head">
+      <text class="lsec-no">五</text>
+      <text>起卦与卜筮</text>
+      <text class="lsec-arrow">›</text>
+    </view>
+    <view class="lsec-body" wx:if="{{open.divination}}">
+      <text class="lb-title">本应用三法</text>
+      <text>· 每日一卦：依梅花易数时间起卦，以年月日时成卦，同日之内此卦恒定不变。</text>
+      <text>· 观象起卦：观身边物象为上卦，以当下时辰为下卦（物象归一据《说卦传》卦性）。</text>
+      <text>· 数字起卦：心念所至，报两数以上卦，上卦取第一数，下卦取第二数，动爻由两数之和定。</text>
+      <text class="lb-title">古法（仅作文献介绍）</text>
+      <text>蓍占、龟卜、梅花易数、金钱卦等法，见于《周易·系辞》与后世筮书。本应用不设投掷功能，仅作文献陈列。</text>
+      <text class="lb-note">占戒：卜以决疑，不疑不占；心诚则灵，诚则一以贯之。</text>
+    </view>
+  </view>
+
+  <!-- 六、五音与十二律 -->
+  <view class="lsec {{open.tones ? 'is-open' : ''}}" bindtap="toggle" data-key="tones">
+    <view class="lsec-head">
+      <text class="lsec-no">六</text>
+      <text>五音与十二律</text>
+      <text class="lsec-arrow">›</text>
+    </view>
+    <view class="lsec-body" wx:if="{{open.tones}}">
+      <view class="tbl">
+        <view class="tbl-row tbl-head"><text class="t1">五音</text><text class="t2">清浊</text><text class="t3">出处与说明</text></view>
+        <view class="tbl-row" wx:for="{{fiveTones}}" wx:key="name">
+          <text class="t1">{{item.name}}</text>
+          <text class="t2">{{item.clear}}</text>
+          <text class="t3">{{item.desc}}</text>
+        </view>
+      </view>
+      <text class="lb-title">十二律</text>
+      <view class="tbl">
+        <view class="tbl-row" wx:for="{{twelveLv}}" wx:key="name">
+          <text class="t1">{{item.name}}</text>
+          <text class="t2">{{index % 2 === 0 ? '阳' : '阴'}}</text>
+          <text class="t3">半音 {{item.semi}}</text>
+        </view>
+      </view>
+      <text class="lb-note">《礼记·乐记》：「宫为君、商为臣、角为民、徵为事、羽为物。」黄钟为十二律之始。</text>
+    </view>
+  </view>
+
+  <!-- 七、爻位与变卦 -->
+  <view class="lsec {{open.yao ? 'is-open' : ''}}" bindtap="toggle" data-key="yao">
+    <view class="lsec-head">
+      <text class="lsec-no">七</text>
+      <text>爻位与变卦</text>
+      <text class="lsec-arrow">›</text>
+    </view>
+    <view class="lsec-body" wx:if="{{open.yao}}">
+      <text>一卦六爻，自下而上称初、二、三、四、五、上。阳爻为九，阴爻为六：初九、九二、九三、九四、九五、上九；初六、六二、六三、六四、六五、上六。</text>
+      <text class="lb-title">动爻与变卦</text>
+      <text>动爻即变：变则该爻阴阳互易，变出之卦称「之卦」。六十四卦由六爻之阴阳组合而成，故动一爻即成一变。</text>
+      <text class="lb-note">本应用以动爻定音：六爻的阴阳结构对应旋律轮廓，音高不越五声。</text>
+    </view>
+  </view>
+
+  <!-- 八、八音配卦 -->
+  <view class="lsec {{open.tone8 ? 'is-open' : ''}}" bindtap="toggle" data-key="tone8">
+    <view class="lsec-head">
+      <text class="lsec-no">八</text>
+      <text>八音配卦</text>
+      <text class="lsec-arrow">›</text>
+    </view>
+    <view class="lsec-body" wx:if="{{open.tone8}}">
+      <view class="tbl">
+        <view class="tbl-row tbl-head"><text class="t1">八音</text><text class="t2">卦</text><text class="t3">所配</text></view>
+        <view class="tbl-row" wx:for="{{eightTone}}" wx:key="key">
+          <text class="t1">{{item.name}}（{{item.material}}）</text>
+          <text class="t2">{{item.guaName}}</text>
+          <text class="t3">{{item.desc}}</text>
+        </view>
+      </view>
+      <text class="lb-note">《白虎通·礼乐》引《乐记》：埙，坎音也；管，艮音也；鼓，震音也；弦，离音也；钟，兑音也；柷敔，乾音也。陈立《白虎通疏证》补：「箫当为巽音，磬当为坤音。」</text>
+    </view>
+  </view>
+
+  <!-- 九、所据典籍 -->
+  <view class="lsec {{open.books ? 'is-open' : ''}}" bindtap="toggle" data-key="books">
+    <view class="lsec-head">
+      <text class="lsec-no">九</text>
+      <text>所据典籍</text>
+      <text class="lsec-arrow">›</text>
+    </view>
+    <view class="lsec-body" wx:if="{{open.books}}">
+      <view class="tbl">
+        <view class="tbl-row" wx:for="{{books}}" wx:key="name">
+          <text class="t1">{{item.name}}</text>
+          <text class="t3">{{item.use}}</text>
+        </view>
+      </view>
+      <text class="lb-note">凡本应用给出的取象、乐器归属、五音清浊与物象映射，皆注明出处等级：典籍原文 / 后世类书 / 当代类推。</text>
+    </view>
+  </view>
+
+  <view class="page-pad"></view>
+</view>

@@ -1,121 +1,291 @@
 /**
  * 古律象音 · 小程序全局样式
- * 宣纸墨色，呼应卦象的东方气质
+ * ---------------------------------------------------------------
+ * 与网页版同一套设计语言：宣纸为底、墨色为字、朱砂点睛；
+ * 界面语言取法 iOS 玻璃材质 —— 半透明面板、悬浮胶囊标签栏、
+ * 大圆角、柔和高光与分层阴影。
+ * 小程序无 backdrop-filter，玻璃感以「半透明 + 细描边 + 内高光」模拟。
  */
 
 page {
-  --paper: #F5F0E6;
-  --paper-deep: #E5DCCC;
-  --card: #FBF8F1;
-  --ink: #2B2620;
-  --ink-2: #4A443C;
-  --ink-3: #6E675C;
-  --ink-4: #8A8175;
-  --cinnabar: #B23A2E;
-  --cinnabar-soft: rgba(178, 58, 46, .12);
-  --line: #C9BFAD;
-  --line-soft: #E0D7C6;
-  --gold: #A8894F;
+  --paper:      #F4EFE5;
+  --paper-deep: #ECE4D5;
+  --card:       #FFFDF8;
+  --ink:        #23201B;
+  --ink-2:      #4A443B;
+  --ink-3:      #8A8175;
+  --ink-4:      #B4AB9D;
+  --line:       #DED5C4;
+  --line-soft:  #EBE3D5;
+  --cinnabar:   #B23A2E;
+  --cinnabar-lt:#D96A57;
+  --cinnabar-soft: rgba(178,58,46,.10);
+  --indigo:     #2E4A5C;
+  --celadon:    #6B8F71;
+  --gold:       #A8823C;
+  --stage:      #0E161F;
 
-  background: var(--paper);
+  background: linear-gradient(180deg, #F6F1E6 0%, #F4EFE5 45%, #ECE4D5 100%);
   color: var(--ink);
-  font-family: "Songti SC", "STSong", "SimSun", serif;
-  font-size: 30rpx;
-  line-height: 1.7;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "DengXian",
+    "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  font-size: 28rpx;
+  line-height: 1.62;
   -webkit-font-smoothing: antialiased;
 }
 
-view, text, button, input, scroll-view {
-  box-sizing: border-box;
-}
+view, text, button, input, textarea, scroll-view { box-sizing: border-box; }
 
-/* ---------- 卡片 ---------- */
-.card {
-  background: var(--card);
-  border: 2rpx solid var(--line-soft);
-  border-radius: 20rpx;
-  padding: 32rpx 28rpx;
-  margin: 24rpx;
-  box-shadow: 0 2rpx 16rpx rgba(43, 38, 32, .04);
+/* ===============================================================
+   玻璃卡片（网页版 .glass-card 的小程序对应）
+   =============================================================== */
+.glass-card {
+  position: relative;
+  margin: 0 24rpx 24rpx;
+  padding: 28rpx 26rpx;
+  border-radius: 30rpx;
+  background: linear-gradient(160deg, rgba(255,253,248,.88), rgba(255,253,248,.60));
+  border: 1rpx solid rgba(178,160,132,.22);
+  box-shadow: 0 2rpx 0 rgba(255,255,255,.75) inset,
+              0 20rpx 56rpx rgba(58,48,34,.10);
+}
+.glass-card::after {
+  content: "";
+  position: absolute;
+  left: 26rpx; right: 26rpx; top: 0;
+  height: 1rpx;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.9), rgba(255,255,255,0));
 }
 
 .card-head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 24rpx;
+  margin-bottom: 18rpx;
 }
-
-.card-head .title {
-  font-size: 34rpx;
-  font-weight: 600;
+.card-head .title,
+.card-head .ch-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  letter-spacing: .06em;
   color: var(--ink);
-  letter-spacing: .08em;
+}
+.card-head .ch-note {
+  font-size: 22rpx;
+  color: var(--ink-3);
+  letter-spacing: .04em;
 }
 
-/* ---------- 按钮 ---------- */
+/* 旧卡片（保留兼容既有页面） */
+.card {
+  background: linear-gradient(160deg, rgba(255,253,248,.86), rgba(255,253,248,.58));
+  border: 1rpx solid rgba(178,160,132,.20);
+  border-radius: 28rpx;
+  padding: 30rpx 26rpx;
+  margin: 0 24rpx 24rpx;
+  box-shadow: 0 2rpx 0 rgba(255,255,255,.7) inset, 0 18rpx 50rpx rgba(58,48,34,.09);
+}
+
+/* ===============================================================
+   按钮
+   =============================================================== */
 .btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 10rpx;
   height: 88rpx;
-  border-radius: 12rpx;
-  font-size: 30rpx;
-  letter-spacing: .1em;
-  transition: opacity .2s;
+  padding: 0 40rpx;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  letter-spacing: .08em;
+  line-height: 1.2;
+  border: 1rpx solid transparent;
+  transition: transform .18s cubic-bezier(.2,.9,.25,1.1), opacity .18s ease;
 }
-
 .btn::after { border: none; }
-
+.btn:active { transform: scale(.96); opacity: .92; }
 .btn-primary {
-  background: var(--cinnabar);
+  background: linear-gradient(150deg, #D96A57, #B23A2E);
   color: #FFF8F0;
-  box-shadow: 0 4rpx 14rpx rgba(178, 58, 46, .22);
+  box-shadow: 0 8rpx 28rpx rgba(178,58,46,.28), 0 1rpx 0 rgba(255,255,255,.4) inset;
 }
-
 .btn-ghost {
-  background: transparent;
-  border: 2rpx solid var(--line);
+  background: rgba(255,255,255,.55);
+  border: 1rpx solid rgba(178,160,132,.24);
   color: var(--ink-2);
 }
-
 .btn-sm {
   height: 60rpx;
-  padding: 0 24rpx;
+  padding: 0 26rpx;
   font-size: 24rpx;
-  border-radius: 8rpx;
+  letter-spacing: .04em;
 }
-
-.btn-disabled {
+.btn-disabled,
+.btn[disabled] {
   background: var(--paper-deep);
   color: var(--ink-4);
   box-shadow: none;
+  opacity: .6;
+}
+.btn-play {
+  min-width: 240rpx;
+  height: 96rpx;
+  font-size: 30rpx;
+  gap: 14rpx;
 }
 
-/* ---------- 文本 ---------- */
+/* ===============================================================
+   文本
+   =============================================================== */
 .panel-desc {
-  font-size: 26rpx;
+  font-size: 25rpx;
   color: var(--ink-3);
-  line-height: 1.85;
-  margin: 0 0 28rpx;
+  line-height: 1.8;
+  margin: 0 0 24rpx;
 }
-
 .panel-note {
   font-size: 23rpx;
   color: var(--ink-4);
   margin-top: 20rpx;
-  line-height: 1.7;
+  line-height: 1.75;
 }
-
 .disclaimer {
-  padding: 32rpx 40rpx 60rpx;
+  margin: 8rpx 24rpx 32rpx;
+  padding: 26rpx;
+  border-radius: 24rpx;
+  background: rgba(255,255,255,.40);
+  border: 1rpx solid var(--line-soft);
   font-size: 22rpx;
-  color: var(--ink-4);
-  line-height: 1.9;
-  text-align: center;
+  color: var(--ink-3);
+  line-height: 1.85;
+}
+.disclaimer .strong,
+.disclaimer .dis-title {
+  display: block;
+  color: var(--ink-2);
+  font-weight: 700;
+  margin-bottom: 6rpx;
 }
 
-.disclaimer .strong {
-  color: var(--ink-3);
-  font-weight: 600;
+/* ===============================================================
+   折叠章节（学易栏）
+   =============================================================== */
+.lsec {
+  margin: 0 24rpx 18rpx;
+  border-radius: 26rpx;
+  background: rgba(255,255,255,.55);
+  border: 1rpx solid rgba(178,160,132,.18);
+  overflow: hidden;
 }
+.lsec-head {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  padding: 26rpx;
+  font-size: 29rpx;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--ink);
+}
+.lsec-head .lsec-no {
+  width: 42rpx; height: 42rpx;
+  flex: none;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22rpx;
+  color: #fff;
+  background: linear-gradient(150deg, #D96A57, #B23A2E);
+}
+.lsec-head .lsec-arrow {
+  margin-left: auto;
+  color: var(--ink-4);
+  font-size: 24rpx;
+  transition: transform .22s ease;
+}
+.lsec.is-open .lsec-arrow { transform: rotate(90deg); }
+.lsec-body {
+  padding: 0 26rpx 26rpx;
+  font-size: 25rpx;
+  color: var(--ink-2);
+  line-height: 1.85;
+}
+.lsec-body .lb-title {
+  display: block;
+  margin: 20rpx 0 8rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+.lsec-body .lb-note { color: var(--ink-3); font-size: 23rpx; }
+
+/* ===============================================================
+   徽标（文献档位）
+   =============================================================== */
+.badge {
+  display: inline-block;
+  padding: 2rpx 12rpx;
+  margin-right: 10rpx;
+  border-radius: 8rpx;
+  font-size: 20rpx;
+  letter-spacing: .04em;
+  vertical-align: middle;
+}
+.badge-classic { color: #7A5A1E; background: rgba(168,130,60,.16); }
+.badge-later  { color: #2E5A46; background: rgba(107,143,113,.18); }
+.badge-modern { color: #4A5560; background: rgba(74,85,96,.12); }
+
+/* ===============================================================
+   底部留白：给 tabBar 与浮动播放条让位
+   =============================================================== */
+.page-pad { height: 200rpx; }
+.page-pad.has-mini { height: 320rpx; }
+
+/* ===============================================================
+   浮动播放条（音乐播放时自底部标签栏上方滑出）
+   =============================================================== */
+.miniplayer {
+  position: fixed;
+  left: 24rpx; right: 24rpx;
+  bottom: calc(140rpx + env(safe-area-inset-bottom));
+  max-width: 702rpx;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  height: 92rpx;
+  padding: 0 12rpx 0 20rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(160deg, rgba(255,254,250,.94), rgba(252,249,242,.76));
+  border: 1rpx solid rgba(178,160,132,.22);
+  box-shadow: 0 2rpx 0 rgba(255,255,255,.8) inset,
+              0 18rpx 52rpx rgba(58,48,34,.18);
+  z-index: 80;
+}
+.mp-wave { display: flex; align-items: flex-end; gap: 4rpx; height: 30rpx; flex: none; }
+.mp-wave .w1, .mp-wave .w2, .mp-wave .w3, .mp-wave .w4 {
+  width: 5rpx; border-radius: 3rpx;
+  background: linear-gradient(180deg, #D96A57, #B23A2E);
+}
+.mp-wave .w1 { height: 12rpx; }
+.mp-wave .w2 { height: 26rpx; }
+.mp-wave .w3 { height: 17rpx; }
+.mp-wave .w4 { height: 30rpx; }
+.mp-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2rpx; }
+.mp-title {
+  font-size: 26rpx; font-weight: 700; letter-spacing: .04em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mp-sub { font-size: 20rpx; color: var(--ink-3); letter-spacing: .06em; }
+.mp-btn {
+  width: 64rpx; height: 64rpx; flex: none;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26rpx;
+  color: var(--cinnabar);
+  background: rgba(255,255,255,.6);
+  border: 1rpx solid rgba(178,160,132,.18);
+}
+.mp-btn.is-on { color: #fff; background: linear-gradient(150deg, #D96A57, #B23A2E); border-color: transparent; }
+.mp-play { color: #fff; background: linear-gradient(150deg, #D96A57, #B23A2E); border-color: transparent; }

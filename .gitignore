@@ -28,6 +28,9 @@ samples/
 miniprogram/project.private.config.json
 scripts/.cache/probe.html
 
+# 临时探针脚本
+.tmp-*
+
 # 编辑器与系统
 .DS_Store
 Thumbs.db

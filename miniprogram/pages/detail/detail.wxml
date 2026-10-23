@@ -1,4 +1,4 @@
-<!-- 学易心音 · 卦象详情 -->
+<!-- 古律象音 · 卦象详情 -->
 <view class="page">
 
   <view wx:if="{{!hasResult}}" class="empty">

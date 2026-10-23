@@ -188,7 +188,6 @@ class CDP {
       hasRender: typeof window.ICRender !== 'undefined',
       hasPlayer: typeof window.ICPlayer !== 'undefined',
       hasRecognize: typeof window.ICRecognize !== 'undefined',
-      hasVision: typeof window.ICVision !== 'undefined',
       hexCount: window.ICData ? window.ICData.HEXAGRAMS.length : 0,
       libSize: window.ICRecognize ? window.ICRecognize.librarySize : 0,
       symbol: (document.querySelector('#resultSymbol')||{}).textContent || '',
@@ -206,7 +205,6 @@ class CDP {
   b.hasRender ? ok('core/render.js 已加载') : err('core/render.js 未加载');
   b.hasPlayer ? ok('core/player.js 已加载') : err('core/player.js 未加载');
   b.hasRecognize ? ok('core/recognize.js 已加载') : err('core/recognize.js 未加载');
-  b.hasVision ? ok('core/vision.js 已加载') : err('core/vision.js 未加载');
   b.libSize >= 200 ? ok(`物象库 ${b.libSize} 个物象`) : err(`物象库偏少：${b.libSize}`);
   b.hexCount === 64 ? ok(`64 卦数据完整`) : err(`卦象数据错误：${b.hexCount}`);
   b.symbol ? ok(`自动展示今日之卦：${b.symbol} ${b.name}`) : err('未自动展示卦象');
@@ -251,17 +249,11 @@ class CDP {
       const desk = ICRecognize.normalizeOne('一张木制桌子');
       const chair = ICRecognize.normalizeOne('一把椅子，座位是空的');
 
-      // 2) 模型文本解析：模拟真实视觉返回
-      const ui = ICVision.fromModelText('桌子\\n椅子\\n笔记本电脑\\n一杯咖啡');
-
-      // 3) 未配置接口时不应报错
-      const notCfg = ICVision.notConfigured();
-
-      // 4) 物象搜索
+      // 2) 物象搜索
       const searchChair = ICRecognize.searchImages('椅');
       const searchDesk = ICRecognize.searchImages('desk');
 
-      // 5) 搜索框在页面中的交互
+      // 3) 搜索框在页面中的交互
       const input = document.querySelector('#imageSearch');
       input.value = '椅';
       input.dispatchEvent(new Event('input'));
@@ -275,34 +267,21 @@ class CDP {
       return {
         deskImage: desk.image, deskGua: desk.gua, deskMatched: desk.matched,
         chairImage: chair.image, chairGua: chair.gua, chairMatched: chair.matched,
-        candCount: ui.candidates.length,
-        candLabels: ui.candidates.map(c => c.label),
-        upper: ui.upper,
-        allHaveGua: ui.candidates.every(c => !!ICData.TRIGRAMS[c.gua]),
-        notCfgFlag: notCfg.notConfigured,
         searchChair: searchChair.length,
         searchChairTop: searchChair[0] ? searchChair[0].image : '',
         searchDeskTop: searchDesk[0] ? searchDesk[0].image : '',
-        chipCount, firstChip, restored,
-        visionBoxExists: !!document.querySelector('.vision-box'),
-        fileInputExists: !!document.querySelector('#visionFile')
+        chipCount, firstChip, restored
       };
     })()`,
     returnByValue: true
   });
   const vv = vis.result.value;
-  vv.visionBoxExists ? ok('识象区已渲染') : err('识象区缺失');
-  vv.fileInputExists ? ok('拍照输入已就绪') : err('拍照输入缺失');
   vv.deskMatched && vv.deskImage === '桌案' && vv.deskGua === 'gen'
     ? ok(`「一张木制桌子」→ 桌案(艮)：与是否餐桌无关`)
     : err(`桌子归一异常：${vv.deskImage}/${vv.deskGua}`);
   vv.chairMatched && vv.chairImage === '椅子' && vv.chairGua === 'gen'
     ? ok(`「一把椅子，座位是空的」→ 椅子(艮)：空不空不影响取卦`)
     : err(`椅子归一异常：${vv.chairImage}/${vv.chairGua}`);
-  vv.candCount >= 4 ? ok(`模型返回 ${vv.candCount} 个候选：${vv.candLabels.join('、')}`)
-    : err(`候选过少：${vv.candCount}`);
-  vv.allHaveGua ? ok('全部候选均有卦') : err('存在无卦候选');
-  vv.notCfgFlag ? ok('未配置接口时给出手动兜底') : err('兜底标记缺失');
   vv.searchChair > 0 && vv.searchChairTop === '椅子'
     ? ok(`搜「椅」命中「${vv.searchChairTop}」`) : err(`搜「椅」异常：${vv.searchChairTop}`);
   vv.searchDeskTop === '桌案'
@@ -999,7 +978,7 @@ class CDP {
       out.marked = !!document.querySelector('#skinList .skin-opt.is-on');
       // 偏好应已写入
       try {
-        const pref = JSON.parse(localStorage.getItem('guaxiang-xinyin-pref') || '{}');
+        const pref = JSON.parse(localStorage.getItem('gulv-xiangyin-pref') || '{}');
         out.saved = pref.skin;
       } catch (e) { out.saved = 'err'; }
       // 切回纸本

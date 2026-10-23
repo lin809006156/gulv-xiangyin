@@ -1,5 +1,5 @@
 /**
- * 学易心音 · 首页（起卦）
+ * 古律象音 · 首页（起卦）
  * ---------------------------------------------------------------
  * 三种起卦方式：每日一卦 / 观象起卦 / 数字起卦
  * 起卦后展示卦象与心音播放器
@@ -344,18 +344,13 @@ Page({
     wx.switchTab({ url: '/pages/calendar/calendar' });
   },
 
-  /** 跳转拍照识象页（tabBar 页面须用 switchTab，不能 navigateTo） */
-  goVision() {
-    wx.switchTab({ url: '/pages/vision/vision' });
-  },
-
   shareApp() {
-    const name = this.data.name || '学易心音';
+    const name = this.data.name || '古律象音';
     wx.showShareMenu({ withShareTicket: true, menus: ['shareAppMessage'] });
   },
 
   onShareAppMessage() {
-    const name = this.data.name || '学易心音';
+    const name = this.data.name || '古律象音';
     const hint = this.data.hint || '观身边之物，每日起一卦';
     return {
       title: `今日之卦 · ${name}`,

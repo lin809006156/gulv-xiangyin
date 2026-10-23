@@ -1,12 +1,12 @@
 /**
- * 学易心音 · APP 主控（iPhone 玻璃拟态版）
+ * 古律象音 · APP 主控（iPhone 玻璃拟态版）
  * ---------------------------------------------------------------
  * 职责：三栏导航、界面渲染、交互编排、播放控制、卦历存储、乐器试听
  * 依赖：core/data.js、core/hexagram.js、core/music.js、core/player.js
- *      core/recognize.js、core/vision.js、js/learn.js
+ *      core/recognize.js、js/learn.js
  *
  * 栏位：
- *   起卦 —— 每日一卦 / 观象起卦（含拍照识象）/ 数字起卦 + 卦象解读 + 卦历
+ *   起卦 —— 每日一卦 / 观象起卦（手动选物象）/ 数字起卦 + 卦象解读 + 卦历
  *   音乐 —— 当前卦心音直达 + 播放器 + 乐器园（八音介绍与试听）
  *   学易 —— 易经知识（由 learn.js 渲染）
  *
@@ -22,11 +22,10 @@
   const M = window.ICMusic;
   const P = window.ICPlayer;
   const R = window.ICRecognize;
-  const V = window.ICVision;
   const G = window.ICRender;
 
-  const STORAGE_KEY = 'guaxiang-xinyin-history';
-  const PREF_KEY = 'guaxiang-xinyin-pref';
+  const STORAGE_KEY = 'gulv-xiangyin-history';
+  const PREF_KEY = 'gulv-xiangyin-pref';
 
   let currentResult = null;
   let currentScore = null;
@@ -159,7 +158,6 @@
     bindTabbar();
     bindButtons();
     bindImageSearch();
-    bindVision();
     renderInstruments();
     renderHistory();
     updateDailyNote();
@@ -557,7 +555,6 @@
     const t = D.TRIGRAMS[item.gua];
     $('#selImageGua').textContent = `属${t.name}卦 · ${t.attribute}`;
     $('#btnImage').disabled = false;
-    // 识象候选若来自拍照，选中它即同步高亮
     $$('.vcand').forEach((c) => c.classList.remove('is-on'));
   }
 
@@ -581,7 +578,7 @@
       if (!hits.length) {
         const empty = document.createElement('p');
         empty.className = 'search-empty';
-        empty.textContent = `没有找到「${kw}」。换个词试试，或直接在下方拍照识别。`;
+        empty.textContent = `没有找到「${kw}」。换个词试试，或在下方直接选物象。`;
         wrap.appendChild(empty);
         return;
       }
@@ -615,155 +612,8 @@
     });
   }
 
-  /* ===============================================================
-   * 拍照识象
-   *
-   * 三条路径，任何一条都不产生死路：
-   *   1. 配了视觉接口 → 真识别，出候选卡
-   *   2. 没配接口     → 明确提示，直接用下方物象库
-   *   3. 识别失败     → 提示重拍 + 物象库仍可用
-   * =============================================================== */
 
-  let visionCandidates = [];
-  let visionSelected = -1;
-
-  function bindVision() {
-    const file = $('#visionFile');
-    const pick = $('#btnVisionPick');
-    if (!file || !pick) return;
-
-    pick.addEventListener('click', () => file.click());
-
-    file.addEventListener('change', () => {
-      const f = file.files && file.files[0];
-      if (f) handleVisionFile(f);
-      file.value = '';
-    });
-
-    const clear = $('#btnVisionClear');
-    if (clear) {
-      clear.addEventListener('click', () => {
-        $('#visionPreview').hidden = true;
-        $('#visionResult').hidden = true;
-        visionCandidates = [];
-        visionSelected = -1;
-        $('#btnVisionCast').disabled = true;
-      });
-    }
-
-    const cast = $('#btnVisionCast');
-    if (cast) {
-      cast.addEventListener('click', () => {
-        const c = visionCandidates[visionSelected];
-        if (!c) return;
-        selectImage({ name: c.image || c.label, gua: c.gua }, null);
-        // 复用既有的观象起卦链路
-        castImage();
-      });
-    }
-
-    // 接口配置区：默认折叠。技术选项不该占据首屏 ——
-    // 大多数用户不会配置识别接口，直接用下方物象库即可。
-    const cfg = $('#visionConfig');
-    if (cfg) {
-      const box = cfg.parentElement;
-      // 插到配置区之前，作为展开开关
-      const toggle = document.createElement('button');
-      toggle.className = 'vision-cfg-toggle';
-      toggle.type = 'button';
-      toggle.textContent = '技术选项：配置视觉识别接口';
-      box.insertBefore(toggle, cfg);
-      toggle.addEventListener('click', () => {
-        cfg.hidden = !cfg.hidden;
-        toggle.textContent = cfg.hidden
-          ? '技术选项：配置视觉识别接口'
-          : '收起配置';
-      });
-    }
-  }
-
-  function readVisionConfig() {
-    const ep = $('#visionEndpoint');
-    const key = $('#visionKey');
-    return {
-      endpoint: ep ? ep.value.trim() : '',
-      apiKey: key ? key.value.trim() : ''
-    };
-  }
-
-  async function handleVisionFile(f) {
-    const img = $('#visionImg');
-    const reader = new FileReader();
-    reader.onload = () => { img.src = reader.result; };
-    reader.readAsDataURL(f);
-    $('#visionPreview').hidden = false;
-
-    const cfg = readVisionConfig();
-
-    // 路径 2：未配置接口 —— 直接说明，不假装识别
-    if (!cfg.endpoint) {
-      showVisionResult({
-        hint: '未配置视觉接口，已为你保留手动选物象。' +
-              '取卦效果与拍照识别完全一致 —— 直接在下方选「桌子」「椅子」即可。',
-        candidates: []
-      });
-      return;
-    }
-
-    $('#visionHint').textContent = '正在识象…';
-    try {
-      const ui = await V.recognizeByHttp(reader.result, {
-        endpoint: cfg.endpoint,
-        apiKey: cfg.apiKey
-      });
-      $('#visionHint').textContent = '识别完成，可改选';
-      visionCandidates = ui.candidates;
-      visionSelected = ui.defaultIndex >= 0 ? ui.defaultIndex : 0;
-      showVisionResult(ui);
-    } catch (e) {
-      $('#visionHint').textContent = '识别失败，可手动选';
-      showVisionResult({
-        hint: '没能识别这张照片（' + (e.message || '未知错误') + '）。' +
-              '可以换一张更清晰的照片，或直接在下方手动选物象 —— 两种方式取卦完全一样。',
-        candidates: []
-      });
-    }
-  }
-
-  function showVisionResult(ui) {
-    const box = $('#visionResult');
-    const hint = $('#visionResultHint');
-    const cands = $('#visionCands');
-    const castBtn = $('#btnVisionCast');
-    box.hidden = false;
-    hint.textContent = ui.hint || '';
-    cands.innerHTML = '';
-
-    if (!ui.candidates.length) {
-      castBtn.disabled = true;
-      return;
-    }
-    ui.candidates.forEach((c, i) => {
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'vcand' + (i === visionSelected ? ' is-on' : '');
-      el.innerHTML =
-        `<span class="vcand-symbol">${c.symbol}</span>` +
-        `<span class="vcand-main">` +
-          `<span class="vcand-name">${escapeHtml(c.label)}${c.matched ? '' : '<em class="vcand-tag">未收录</em>'}</span>` +
-          `<span class="vcand-gua">${c.guaName}卦 · ${escapeHtml(c.nature || '')}</span>` +
-          `<span class="vcand-reason">${escapeHtml(c.reason)}</span>` +
-        `</span>` +
-        (c.matched ? `<span class="vcand-conf">${c.confidence}</span>` : '');
-      el.addEventListener('click', () => {
-        visionSelected = i;
-        $$('.vcand').forEach((x, k) => x.classList.toggle('is-on', k === i));
-      });
-      cands.appendChild(el);
-    });
-    castBtn.disabled = false;
-  }
-
+  /** HTML 转义（拼 innerHTML 时防注入） */
   function escapeHtml(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -1401,7 +1251,7 @@
 
   /** 会参与液态按压的玻璃按键（与 CSS 的选择器列表对应） */
   const LIQUID_SEL = '.btn, .tabbtn, .seg, .viz-mode, .mp-btn, .skin-opt,'
-    + ' .segmented .tab, .amb-chip, .inst-play, .icon-btn, .vol-btn, .vision-clear';
+    + ' .segmented .tab, .amb-chip, .inst-play, .icon-btn, .vol-btn';
   /** 会荡开涟漪的主操作键 */
   const RIPPLE_SEL = '.btn-play, .mp-btn';
 
@@ -1629,9 +1479,9 @@
       const blob = new Blob([buf], { type: 'audio/wav' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      const name = currentResult ? currentResult.hex.name : '学易心音';
+      const name = currentResult ? currentResult.hex.name : '古律象音';
       a.href = url;
-      a.download = `${name}-学易心音.wav`;
+      a.download = `${name}-古律象音.wav`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

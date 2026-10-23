@@ -1,9 +1,0 @@
-{
-  "name": "vision",
-  "version": "1.0.0",
-  "description": "图像识别取物象 —— 多模态模型转发",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "~2.6.3"
-  }
-}

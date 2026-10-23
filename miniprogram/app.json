@@ -1,14 +1,13 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/vision/vision",
     "pages/detail/detail",
     "pages/calendar/calendar"
   ],
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#EFE8DA",
-    "navigationBarTitleText": "学易心音",
+    "navigationBarTitleText": "古律象音",
     "navigationBarTextStyle": "black",
     "backgroundColor": "#F5F0E6"
   },
@@ -21,10 +20,6 @@
       {
         "pagePath": "pages/index/index",
         "text": "起卦"
-      },
-      {
-        "pagePath": "pages/vision/vision",
-        "text": "识象"
       },
       {
         "pagePath": "pages/calendar/calendar",

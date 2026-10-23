@@ -1,5 +1,5 @@
 /**
- * 学易心音 · 校验脚本
+ * 古律象音 · 校验脚本
  * 运行：node scripts/verify.js
  */
 const D = require('../core/data.js');

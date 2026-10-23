@@ -27,7 +27,6 @@ const TARGETS = [
  *   data         依赖 classics，必须在其后
  *   hexagram-texts 六十四卦详解（原文 + 京房八宫纳甲），依赖 data 的卦序
  *   hexagram / music / render / player / recognize
- *   vision       依赖 recognize，必须在其后
  */
 const FILES = [
   'require-shim.js',
@@ -40,7 +39,6 @@ const FILES = [
   'render.js',
   'player.js',
   'recognize.js',
-  'vision.js'
 ];
 
 function copyFile(src, dst) {

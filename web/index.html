@@ -7,8 +7,8 @@
 <meta name="description" content="观身边之物起卦，为每一卦生成一段心音。传统文化与艺术创作，不含预测功效。">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="学易心音">
-<title>学易心音 · 每日观象起卦</title>
+<meta name="apple-mobile-web-app-title" content="古律象音">
+<title>古律象音 · 每日观象起卦</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
@@ -24,7 +24,7 @@
       <div class="brand">
         <span class="brand-mark">卦</span>
         <div class="brand-text">
-          <h1>学易心音</h1>
+          <h1>古律象音</h1>
           <p>观身边之物 · 每日起一卦 · 生一段心音</p>
         </div>
       </div>
@@ -154,11 +154,11 @@
       <section class="set-group">
         <h3 class="set-title">关于</h3>
         <p class="set-about">
-          <b>学易心音</b> · 以《周易》卦象与古代律吕文化为灵感，
+          <b>古律象音</b> · 以《周易》卦象与古代律吕文化为灵感，
           为每一卦生成一段供赏析与静心的音乐。属传统文化与艺术创作，
           <b>不含任何预测功效</b>；五音之说为传统音乐与养生观念，非现代医学结论。
         </p>
-        <p class="set-ver">版本 1.1.0 · 三端同源（网页 / 应用 / 小程序）</p>
+        <p class="set-ver">版本 1.2.0 · 三端同源（网页 / 应用 / 小程序）</p>
       </section>
     </div>
   </aside>
@@ -166,7 +166,7 @@
   <main class="main">
 
     <!-- ==================================================
-         页一 · 起卦（每日一卦 / 观象起卦[含拍照识象] / 数字起卦）
+         页一 · 起卦（每日一卦 / 观象起卦 / 数字起卦）
          ================================================== -->
     <section class="page is-active" id="pageCast">
 
@@ -191,42 +191,11 @@
           <p class="panel-note" id="dailyNote"></p>
         </div>
 
-        <!-- 观象起卦（拍照识象并入此栏） -->
+        <!-- 观象起卦（手动选物象） -->
         <div class="tab-panel" data-panel="image">
           <p class="panel-desc">
             眼前所见皆可成卦。选取身边物象为上卦，以当下时辰为下卦。
           </p>
-
-          <!-- 拍照识象 -->
-          <div class="vision-box">
-            <input type="file" id="visionFile" accept="image/*" capture="environment" hidden>
-            <div class="vision-row">
-              <button class="btn btn-ghost btn-sm" id="btnVisionPick">拍照或选图识别</button>
-              <span class="vision-hint" id="visionHint">让程序看照片，自动认出你身边的物象</span>
-            </div>
-            <div class="vision-preview" id="visionPreview" hidden>
-              <img id="visionImg" alt="所拍照片" decoding="async">
-              <button class="vision-clear" id="btnVisionClear" title="移除">×</button>
-            </div>
-            <div class="vision-result" id="visionResult" hidden>
-              <p class="vision-result-hint" id="visionResultHint"></p>
-              <div class="vision-cands" id="visionCands"></div>
-              <button class="btn btn-primary" id="btnVisionCast" disabled>以此物象起卦</button>
-            </div>
-            <div class="vision-config" id="visionConfig" hidden>
-              <label class="vision-cfg-field">
-                <span>视觉接口地址（可选，留空则手动选）</span>
-                <input type="text" id="visionEndpoint" placeholder="如 https://…/v1/chat/completions">
-              </label>
-              <label class="vision-cfg-field">
-                <span>API Key（如需）</span>
-                <input type="password" id="visionKey" placeholder="留空表示无需鉴权">
-              </label>
-              <p class="vision-cfg-note">
-                留空即可直接使用下方「手动选物象」，取卦效果与拍照完全一致。
-              </p>
-            </div>
-          </div>
 
           <div class="image-picker" id="imagePicker"></div>
           <div class="image-search">
@@ -539,7 +508,7 @@
      2. bootstrap.js   —— 跨端加载器
      3. classics.js    —— 文献依据的单一真相源（不依赖其他 core 模块）
      4. data.js        —— 依赖 classics.js，导出 window.ICData
-     5. hexagram.js / music.js / render.js / player.js / recognize.js / vision.js -->
+     5. hexagram.js / music.js / render.js / player.js / recognize.js -->
 <script src="core/require-shim.js"></script>
 <script src="core/bootstrap.js"></script>
 <script src="core/classics.js"></script>
@@ -550,7 +519,6 @@
 <script src="core/render.js"></script>
 <script src="core/player.js"></script>
 <script src="core/recognize.js"></script>
-<script src="core/vision.js"></script>
 <script src="js/learn.js"></script>
 <script src="js/app.js"></script>
 </body>

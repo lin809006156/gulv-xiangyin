@@ -1,5 +1,5 @@
 /**
- * 学易心音 · 学易栏（易经知识学习）
+ * 古律象音 · 学易栏（易经知识学习）
  * ---------------------------------------------------------------
  * 内容来源全部取自 core 模块的既有数据与典籍依据：
  *   D.TRIGRAMS / D.HEXAGRAMS / D.TWELVE_LV / D.MODES / D.EIGHT_TONE / D.FIVE_TONE
@@ -22,7 +22,7 @@
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-  const OPEN_KEY = 'guaxiang-xinyin-learn-open';
+  const OPEN_KEY = 'gulv-xiangyin-learn-open';
 
   function esc(s) {
     return String(s == null ? '' : s)
@@ -538,7 +538,7 @@
       <h4 class="method-subtitle">本应用实现的三法</h4>
       <div class="method-list">${appItems}</div>
       <p class="learn-tip">
-        三法在「起卦」栏均可使用：每日一卦（时间起卦，同日恒定）、观象起卦（所见物象，可拍照识别）、
+        三法在「起卦」栏均可使用：每日一卦（时间起卦，同日恒定）、观象起卦（所见物象，手动选取）、
         数字起卦（心报两数）。三法皆可多爻动 —— 变卦翻转全部动爻而得；六爻皆静则以本卦为是。
         铜钱法（金钱卦）本应用<b>只作文献介绍，不设投掷功能</b>。
       </p>
@@ -684,7 +684,7 @@
     return lsec('柒', '八音配卦', `
       <p class="lsec-desc">
         金、石、丝、竹、匏、土、革、木八类材质，与八卦一一相配；每卦因外卦之异而得不同主奏乐器，
-        此即「学易心音」音色层的第一来源。八种音色均可在「音乐」栏试听。
+        此即「古律象音」音色层的第一来源。八种音色均可在「音乐」栏试听。
       </p>
       <div class="tri-grid">${chips}</div>
       <p class="ccite" style="margin-top:12px">《白虎通·礼乐》引《乐记》：「埙，坎音也；管，艮音也；鼓，震音也；弦，离音也；钟，兑音也；柷敔，乾音也。」清人陈立《白虎通疏证》补：「箫当为巽音，磬当为坤音。」</p>`, 'eight');

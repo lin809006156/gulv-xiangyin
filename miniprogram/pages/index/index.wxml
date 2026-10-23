@@ -1,4 +1,4 @@
-<!-- 学易心音 · 首页 -->
+<!-- 古律象音 · 首页 -->
 <view class="page">
 
   <!-- ============ 顶部 ============ -->
@@ -6,7 +6,7 @@
     <view class="brand">
       <text class="brand-mark">卦</text>
       <view class="brand-text">
-        <text class="brand-title">学易心音</text>
+        <text class="brand-title">古律象音</text>
         <text class="brand-sub">观身边之物 · 每日起一卦 · 生一段心音</text>
       </view>
     </view>
@@ -40,15 +40,6 @@
 
     <!-- 观象起卦 -->
     <view wx:elif="{{mode === 'image'}}" class="panel">
-      <view class="camera-entry" bindtap="goVision">
-        <view class="camera-entry-icon">◎</view>
-        <view class="camera-entry-body">
-          <view class="camera-entry-title">拍照识象</view>
-          <view class="camera-entry-sub">让程序看照片，自动认出你身边的物象</view>
-        </view>
-        <view class="camera-entry-arrow">›</view>
-      </view>
-
       <text class="panel-desc">眼前所见皆可成卦。选取身边物象为上卦，以当下时辰为下卦。</text>
       <view class="image-groups">
         <view class="img-group" wx:for="{{imageGroups}}" wx:key="category">

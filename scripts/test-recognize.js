@@ -79,51 +79,7 @@ head('4. 兜底：不能死路');
 }
 
 /* 5 */
-head('5. 整份识别结果归一');
-{
-  const labels = ['一张木制桌子', '空椅子', '一台笔记本电脑', '一杯咖啡', '窗外有树'];
-  const res = R.normalizeAll(labels);
-  console.log(`  识别到 ${res.items.length} 个元素，上卦取「${res.upper}」(${res.upperGua})`);
-  const cands = R.toCandidates(res);
-  cands.forEach((c) => {
-    console.log(`    ${c.matched ? '实' : '兜'} ${c.label.padEnd(6)} ${c.guaName}${c.symbol}  置信 ${c.confidence.toFixed(2)}`);
-  });
-  if (cands.length < 3) err('候选过少');
-  // 上卦 = AI 排序第一的（最显著）物象 —— AI 已按画面显著性排序
-  if (res.upper !== '椅子') err(`上卦应为画面主体「椅子」，实得 ${res.upper}`);
-  ok(`上卦取画面主体物「${res.upper}」（AI 排序第一）`);
-  // 置信度应有梯度，不能全部相同
-  const confs = cands.map((c) => c.confidence);
-  const spread = Math.max(...confs) - Math.min(...confs);
-  if (spread < 0.05) err(`置信度无区分度（极差 ${spread.toFixed(2)}），无法区分主次`);
-  else ok(`置信度分层生效：${Math.min(...confs).toFixed(2)} ~ ${Math.max(...confs).toFixed(2)}`);
-  // 兜底项必须排在已匹配项之后
-  const firstFallback = cands.findIndex((c) => !c.matched);
-  const lastMatched = cands.map((c) => c.matched).lastIndexOf(true);
-  if (firstFallback !== -1 && firstFallback < lastMatched) err('兜底项排在了已匹配项之前');
-  // 所有候选都必须有卦
-  cands.forEach((c) => { if (!D.TRIGRAMS[c.gua]) err('候选缺卦'); });
-  ok('全部候选均有卦，无死路');
-}
-
-head('6. 端到端：识象 → 起卦 → 音乐');
-{
-  const res = R.normalizeAll(['一张木制桌子', '空椅子'], { now: new Date(2026, 9, 20, 15, 0, 0) });
-  const up = res.upperGua;
-  const div = H.imageHexagram(res.upper, up, new Date(2026, 9, 20, 15, 0, 0));
-  console.log(`  物象「${res.upper}」属${D.TRIGRAMS[up].name}`);
-  console.log(`  → ${div.hex.name} ${div.hex.symbol}  动爻 ${div.movingLine}`);
-  console.log(`  理由：${div.hex.xiang}`);
-  if (!div.hex || !div.music) err('起卦链路断裂');
-  ok('识象 → 卦象 → 音乐参数 链路打通');
-
-  // 同输入必须同结果
-  const div2 = H.imageHexagram(res.upper, up, new Date(2026, 9, 20, 15, 0, 0));
-  if (div2.hex.n !== div.hex.n) err('结果不可复现');
-  ok('同一画面同一时刻，结果完全可复现');
-}
-
-head('7. 手动搜索兜底');
+head('5. 手动搜索兜底');
 [['桌', 1], ['椅', 1], ['desk', 1], ['手机', 1], ['xyz不存在', 0]].forEach(([kw, min]) => {
   const r = R.searchImages(kw, 12);
   console.log(`  [?] 搜「${kw}」→ ${r.length} 条`);
@@ -135,7 +91,7 @@ head('7. 手动搜索兜底');
   ok('口语单字也能搜到标准物象');
 }
 
-head('8. 界面数据完整性');
+head('6. 界面数据完整性');
 {
   const flat = R.flattenLibrary();
   const total = flat.reduce((s, g) => s + g.items.length, 0);

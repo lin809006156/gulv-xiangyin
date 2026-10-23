@@ -1,4 +1,4 @@
-package com.guaxiang.xinyin;
+package com.gulv.xiangyin;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -1,6 +1,6 @@
 {
-  "name": "学易心音 · 每日观象起卦",
-  "short_name": "学易心音",
+  "name": "古律象音 · 每日观象起卦",
+  "short_name": "古律象音",
   "description": "观身边之物起卦，为每一卦生成一段心音。传统文化与艺术创作，不含预测功效。",
   "start_url": "./index.html",
   "scope": "./",

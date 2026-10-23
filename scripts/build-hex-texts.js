@@ -356,7 +356,7 @@ Object.keys(PALACE_TABLE).forEach((pal) => {
 const j = (v) => JSON.stringify(v, null, 1).replace(/\n/g, '\n  ');
 
 const file = `/**
- * 学易心音 · 六十四卦详解数据层
+ * 古律象音 · 六十四卦详解数据层
  * ---------------------------------------------------------------
  * 本文件由 scripts/build-hex-texts.js 自动生成，请勿手工编辑。
  *

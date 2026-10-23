@@ -1,4 +1,4 @@
-# 学易心音 · Unity 可视化模块（HexagramVFX）
+# 古律象音 · Unity 可视化模块（HexagramVFX）
 
 面向移动端（Android / iOS）的**音频响应式易经卦象音乐可视化**模块：
 Unity URP + VFX Graph，深色极简科技展厅、镜面地面、六爻古铜卦象、

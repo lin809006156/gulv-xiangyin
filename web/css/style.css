@@ -1,5 +1,5 @@
 /* ===============================================================
-   学易心音 · 样式（iPhone 玻璃拟态 · Liquid Glass）
+   古律象音 · 样式（iPhone 玻璃拟态 · Liquid Glass）
    ---------------------------------------------------------------
    视觉取意：宣纸为底、墨色为字、朱砂点睛；
    界面语言取法 iOS 玻璃材质：半透明磨砂面板、悬浮底部标签栏、
@@ -364,45 +364,8 @@ body {
 
 /* ============ 拍照识象 ============ */
 
-.vision-box {
-  border-radius: var(--radius-md);
-  padding: 14px;
-  margin-bottom: 16px;
-  background:/1rgba(var(--tint),.42);
-  box-shadow: 0 0 0 1px var(--glass-brd-out);
-}
-.vision-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.vision-hint { font-size: 12px; color: var(--ink-3); }
 
-.vision-preview {
-  position: relative;
-  margin-top: 12px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  box-shadow: 0 4px 14px rgba(58,48,34,.14);
-}
-.vision-preview img { display: block; width: 100%; max-height: 240px; object-fit: cover; }
-.vision-clear {
-  position: absolute;
-  top: 8px; right: 8px;
-  width: 26px; height: 26px;
-  border: none; border-radius: 50%;
-  cursor: pointer;
-  color: #fff;
-  font-size: 15px;
-  line-height: 1;
-  background: rgba(35,32,27,.55);
-  backdrop-filter: blur(6px);
-}
 
-.vision-result { margin-top: 12px; }
-.vision-result-hint { font-size: 12.5px; color: var(--ink-2); margin-bottom: 10px; }
-.vision-cands { display: grid; gap: 8px; margin-bottom: 12px; }
 
 .vcand {
   display: flex;
@@ -447,30 +410,6 @@ body {
 .vcand-reason { font-size: 11px; color: var(--ink-3); }
 .vcand-conf { font-size: 11px; color: var(--ink-4); flex: none; }
 
-.vision-cfg-toggle {
-  appearance: none;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--ink-3);
-  background: none;
-  padding: 8px 0 0;
-  text-decoration: underline dotted;
-}
-.vision-config { margin-top: 10px; display: grid; gap: 10px; }
-.vision-cfg-field { display: grid; gap: 5px; }
-.vision-cfg-field span { font-size: 12px; color: var(--ink-2); }
-.vision-cfg-field input {
-  font-family: var(--font-sans);
-  font-size: 13px;
-  padding: 9px 12px;
-  border: none;
-  border-radius: 10px;
-  background:/1rgba(var(--tint),.7);
-  box-shadow: 0 0 0 1px var(--glass-brd-out);
-  color: var(--ink);
-}
-.vision-cfg-note { font-size: 11.5px; color: var(--ink-3); }
 
 /* ============ 物象选择 ============ */
 
@@ -2334,7 +2273,7 @@ body.has-miniplayer .sheet-body {
 
 /* 参与液态按压的玻璃按键（与 app.js 的 LIQUID_SEL 对应） */
 .btn, .tabbtn, .seg, .viz-mode, .mp-btn, .skin-opt,
-.segmented .tab, .amb-chip, .inst-play, .icon-btn, .vol-btn, .vision-clear {
+  .segmented .tab, .amb-chip, .inst-play, .icon-btn, .vol-btn {
   position: relative;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
@@ -2343,7 +2282,7 @@ body.has-miniplayer .sheet-body {
 /* 1 · 触点高光 */
 .btn::after, .tabbtn::after, .seg::after, .viz-mode::after, .mp-btn::after,
 .skin-opt::after, .segmented .tab::after, .amb-chip::after, .inst-play::after,
-.icon-btn::after, .vol-btn::after, .vision-clear::after {
+  .icon-btn::after, .vol-btn::after {
   content: "";
   position: absolute;
   inset: 0;

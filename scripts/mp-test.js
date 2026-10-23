@@ -225,7 +225,7 @@ assert(!!appInstance.globalData.currentResult, '预热：今日之卦已算好')
 assert(!!appInstance.globalData.currentScore, '预热：音符表已算好');
 console.log(`  今日之卦：${appInstance.globalData.currentResult.hex.name}`);
 
-console.log('\n【2】加载首页');
+console.log('\n【1】加载首页');
 const indexMod = loadModule('pages/index/index.js');
 const index = currentPage;
 assert(!!index, 'Page 实例已创建');
@@ -243,11 +243,11 @@ assert(index.data.musicParams.length === 6, '音乐参数齐备');
 assert(index.data.sections.length === 4, '起承转合四段齐备');
 assert(/^\d{2}:\d{2} \/ \d{2}:\d{2}$/.test(index.data.playerTime), `时长显示：${index.data.playerTime}`);
 
-console.log('\n【3】切换起卦方式');
+console.log('\n【2】切换起卦方式');
 index.onModeChange({ currentTarget: { dataset: { mode: 'image' } } });
 assert(index.data.mode === 'image', '切换到观象起卦');
 
-console.log('\n【4】选择物象并起卦');
+console.log('\n【3】选择物象并起卦');
 const firstItem = index.data.imageGroups[0].items[0];
 index.onImageSelect({ currentTarget: { dataset: { name: firstItem.name, gua: firstItem.gua } } });
 assert(index.data.selectedImageName === firstItem.name, `已选物象：${firstItem.name}`);
@@ -259,7 +259,7 @@ assert(index.data.hasResult === true, '观象起卦成功');
 assert(index.data.methodText === '观象起卦', `起卦方式：${index.data.methodText}`);
 console.log(`  结果：${beforeName} → ${index.data.name}`);
 
-console.log('\n【5】数字起卦');
+console.log('\n【4】数字起卦');
 index.onModeChange({ currentTarget: { dataset: { mode: 'number' } } });
 index.onNumInput({ currentTarget: { dataset: { key: 'numUpper' } }, detail: { value: '17' } });
 index.onNumInput({ currentTarget: { dataset: { key: 'numLower' } }, detail: { value: '43' } });
@@ -267,13 +267,13 @@ index.castNumber();
 assert(index.data.methodText === '数字起卦', '数字起卦成功');
 console.log(`  结果：${index.data.name}`);
 
-console.log('\n【6】无效输入防护');
+console.log('\n【5】无效输入防护');
 index.onNumInput({ currentTarget: { dataset: { key: 'numUpper' } }, detail: { value: '0' } });
 toasts.length = 0;
 index.castNumber();
 assert(toasts.length > 0, `无效数字被拦截：${toasts[0] && toasts[0].title}`);
 
-console.log('\n【7】播放流程');
+console.log('\n【6】播放流程');
 const score = appInstance.globalData.currentScore;
 assert(!!score && score.notes.length > 0, `音符表就绪：${score.notes.length} 个音符`);
 
@@ -289,14 +289,14 @@ index.onPlayerEnd();
 assert(index.data.isPlaying === false, '播放结束状态复位');
 assert(index.data.progressPercent === 0, '进度归零');
 
-console.log('\n【8】卦历写入');
+console.log('\n【7】卦历写入');
 const hist = loadInternal('utils/storage.js');
 const list = hist.loadHistory();
 assert(list.length > 0, `卦历已记录 ${list.length} 条`);
 assert(list[0].name === index.data.name, '最新记录与当前卦一致');
 assert(!!list[0].key, '记录含唯一键');
 
-console.log('\n【9】加载卦历页');
+console.log('\n【8】加载卦历页');
 pageStack.length = 0;
 currentPage = null;
 loadModule('pages/calendar/calendar.js');
@@ -306,7 +306,7 @@ assert(calendar.data.empty === false, '卦历页读到记录');
 assert(calendar.data.list.length === list.length, `列表数量一致：${calendar.data.list.length}`);
 assert(!!calendar.data.list[0].symbol, '列表项含卦符');
 
-console.log('\n【10】加载详情页');
+console.log('\n【9】加载详情页');
 pageStack.length = 0;
 currentPage = null;
 loadModule('pages/detail/detail.js');
@@ -319,7 +319,7 @@ assert(detail.data.musicParams.length === 8, '音乐构成项齐备');
 assert(!!detail.data.upper && !!detail.data.lower, '上下卦信息齐备');
 assert(detail.data.name === index.data.name, '与首页卦象一致');
 
-console.log('\n【11】导航');
+console.log('\n【10】导航');
 navCalls.length = 0;
 index.goDetail();
 assert(navCalls.some((c) => c.type === 'navigateTo' && c.url.includes('detail')), '跳转到详情页');
@@ -327,77 +327,8 @@ index.goCalendar();
 assert(navCalls.some((c) => c.type === 'switchTab'), '跳转到卦历页');
 
 
-console.log('\n【13】识象页：加载与兜底');
-pageStack.length = 0;
-currentPage = null;
-loadModule('pages/vision/vision.js');
-const vision = currentPage;
-vision.onLoad();
-assert(vision.data.library.length === 12, `物象库 12 类（实得 ${vision.data.library.length}）`);
-assert(vision.data.categoryItems.length > 0, '预置了当前分类的物象');
-assert(vision.data.cloudReady === false, '未配 envId 时判定云服务不可用');
-assert(vision.data.manualMode === true, '未配云服务自动进手动模式，不留空白页');
-assert(vision.data.hint.indexOf('手动') !== -1, '手动模式给了明确提示');
-
-console.log('\n【14】识象页：搜索兜底');
-vision.setData({ searchKw: '桌' });
-vision.onSearchInput({ detail: { value: '椅' } });
-assert(vision.data.searchResults.length > 0, `搜「椅」有结果（${vision.data.searchResults.length} 条）`);
-assert(vision.data.searchResults[0].image === '椅子', '首条为「椅子」');
-vision.setData({ searchResults: vision.data.searchResults });
-
-console.log('\n【15】识象页：起卦（物象库点选）');
+console.log('\n【11】导航补充');
 navCalls.length = 0;
-vision.selectSearch({ currentTarget: { dataset: { gua: 'gen', name: '椅子' } } });
-assert(!!vision.data.result, '生成起卦结果');
-assert(vision.data.result.hexName.length > 0, `卦名已定：${vision.data.result.hexName}`);
-assert(vision.data.result.imageName === '椅子', '记录所取物象');
-assert(!!vision.data.result.music.modeName, '含调式参数');
-// pageScrollTo 被页面用 setTimeout 延迟调用（等渲染完成），此处留待异步段断言
-scrollCalled = true;
-
-console.log('\n【16】识象页：候选改选');
-// 模拟识别返回的候选
-vision.setData({
-  candidates: [
-    { label: '桌案', gua: 'gen', guaName: '艮', symbol: '☶', matched: true, reason: '桌案属居家', confidence: 1 },
-    { label: '电脑', gua: 'li', guaName: '离', symbol: '☲', matched: true, reason: '电脑属器用', confidence: 1 },
-    { label: '某物', gua: 'xun', guaName: '巽', symbol: '☴', matched: false, reason: '按方位取', confidence: 0.2 }
-  ],
-  selectedIndex: 0
-});
-vision.selectCandidate({ currentTarget: { dataset: { idx: 1 } } });
-assert(vision.data.selectedIndex === 1, '可改选为第 2 项');
-vision.castSelected();
-assert(vision.data.result.imageName === '电脑', '改选后以新物象起卦');
-assert(vision.data.result.gua === 'li', '改选后卦随之改变');
-
-console.log('\n【17】识象页：未配云服务的降级');
-vision.setData({ photos: [{ path: 'x.jpg', size: 100 }] });
-/* recognize 是 async，用 then 收尾（脚本为 CommonJS，不能顶层 await） */
-vision.recognize().then(() => {
-  assert(vision.data.manualMode === true, '未配云服务时切手动而非报错');
-  assert(vision.data.stage !== 'recognizing', '不进入假识别状态');
-  console.log('  [i] 异步降级路径已验证');
-}, (e) => {
-  console.error('  [X] recognize 抛出异常:', e && e.message);
-  process.exitCode = 1;
-});
-
-console.log('\n【18】识象页：空识别结果不崩');
-assert(scrollCalled === true, '起卦后触发了延迟滚动（让用户看到结果）');
-vision.setData({ cloudReady: true, photos: [{ path: 'x.jpg', size: 100 }] });
-const V = require(path.join(MP_ROOT, 'core/vision.js'));
-const emptyUi = V.fromModelText('');
-assert(emptyUi.upper === null, '空识别时 upper 为 null 而非字符串');
-assert(emptyUi.hint.length > 0, '空识别给了引导文案');
-vision.setData({ empty: emptyUi.empty, hint: emptyUi.hint });
-assert(vision.data.empty === true, '空状态可被 UI 消费');
-
-console.log('\n【19】导航补充');
-navCalls.length = 0;
-index.goVision();
-assert(navCalls.some((c) => c.type === 'switchTab' && c.url.includes('vision')), '首页可跳转识象页（用 switchTab）');
 
 console.log('\n【12】分享文案');
 const share = index.onShareAppMessage();

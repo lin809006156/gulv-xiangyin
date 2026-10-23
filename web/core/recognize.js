@@ -3,8 +3,8 @@
 /* ===============================================================
  * core/recognize.js —— 识象归一层
  *
- * 职责：把「AI 视觉模型输出的自由文本」与「用户口语」，
- *       归一到物象库的标准物象，并给出可用性说明与候选卦。
+ * 职责：把「用户口语」与「自由描述」归一到物象库的标准物象，
+ *       并给出可用性说明。
  *
  * 设计原则（针对"不要让用户不知道选什么"）：
  *  1. 永不失败。任何输入都能落到某个卦上，用户永远拿得到结果。
@@ -179,100 +179,13 @@ function fallbackByHash(s) {
 }
 
 /* ===============================================================
- * 四、多元素归一 —— 拍照识象的主入口
  * =============================================================== */
 
-/**
- * 归一整份识别结果
- * @param {string[]|object[]} labels AI 输出的元素清单，可为字符串数组，
- *        或 { name, confidence, box } 对象数组
- * @param {object} opts
- *        - now: 起卦时间，默认当前
- *        - upperGua: 指定上卦（通常取置信度最高的那个）
- * @returns {object} { items, upper, hexes, primary, degrade }
- */
-function normalizeAll(labels, opts) {
-  const o = opts || {};
-  const arr = (Array.isArray(labels) ? labels : []).filter(Boolean);
-  if (!arr.length) {
-    return { items: [], upper: null, hexes: [], primary: null, degrade: 'empty' };
-  }
-
-  const items = arr.map(function (raw) {
-    const name = typeof raw === 'string' ? raw : (raw.name || raw.label || raw.text || '');
-    const aiConf = typeof raw === 'object' && raw ? (raw.confidence || 0) : 0;
-    const r = normalizeOne(name);
-    // AI 自评置信度与归一置信度取较低者，宁可保守
-    if (aiConf > 0 && aiConf < 1) r.confidence = Math.min(r.confidence, aiConf);
-    return r;
-  });
-
-  // 上卦选取：AI 通常按"画面显著性"排序，第一项往往就是主体物。
-  // 因此综合 归一置信度 与 位置权重（前者为主，后者做微调），
-  // 而不是只看置信度——否则"一杯咖啡"可能压过"一张桌子"。
-  let upperItem = null;
-  const good = items.filter(function (i) { return i.matched; });
-  good.forEach(function (it, idx) {
-    const posWeight = 1 - idx / Math.max(1, good.length) * 0.35;
-    it._rank = it.confidence * posWeight;
-  });
-  if (good.length) {
-    good.sort(function (a, b) { return b._rank - a._rank; });
-    upperItem = good[0];
-  } else {
-    upperItem = items[0];
-  }
-  // 清理内部排序字段
-  items.forEach(function (i) { delete i._rank; });
-
-  return {
-    items,
-    upper: upperItem.image,
-    upperGua: upperItem.gua,
-    upperReason: upperItem.reason,
-    degrade: good.length ? null : 'all-fallback'
-  };
-}
 
 /* ===============================================================
  * 五、面向 UI 的辅助：可选项整理
  * =============================================================== */
 
-/**
- * 把归一结果整理成 UI 可直接渲染的候选列表
- * 去重同卦、标注是否兜底、按可信度排序
- * @param {object} result normalizeAll 的返回值
- * @returns {object[]}
- */
-function toCandidates(result) {
-  const seen = new Set();
-  const list = [];
-  (result.items || []).forEach(function (it) {
-    const key = it.gua + '|' + (it.image || it.cleaned);
-    if (seen.has(key)) return;
-    seen.add(key);
-    list.push({
-      image: it.image,
-      label: it.image || it.cleaned,
-      raw: it.input,
-      category: it.category,
-      gua: it.gua,
-      guaName: TRIGRAMS[it.gua].name,
-      symbol: TRIGRAMS[it.gua].symbol,
-      nature: TRIGRAMS[it.gua].nature || '',
-      matched: it.matched,
-      method: it.method,
-      reason: it.reason,
-      confidence: it.confidence
-    });
-  });
-  // 已匹配的排前面，兜底的排后面
-  list.sort(function (a, b) {
-    if (a.matched !== b.matched) return a.matched ? -1 : 1;
-    return b.confidence - a.confidence;
-  });
-  return list;
-}
 
 /**
  * 搜索物象库：给"手动输入一个词"的兜底框用
@@ -352,47 +265,13 @@ function flattenLibrary() {
 }
 
 /* ===============================================================
- * 六、导出
+ * 五、导出
  * =============================================================== */
 
-/**
- * 供 UI 直接使用的一整套识象数据
- * 把"拍照 → 识别 → 归一 → 起卦"串起来，并强制带上人工改选所需的全部信息。
- *
- * @param {string[]} labels AI 输出的元素清单
- * @param {object} opts { now }
- * @returns {object} {
- *   candidates,   可改选的候选（每个都带卦名/符号/理由/置信度）
- *   defaultIndex, 默认选中的候选下标
- *   allFallback,  是否全部未识别成功（UI 需明示"按方位取"）
- *   hint,        给用户看的一句话说明
- * }
- */
-function prepareForUI(labels, opts) {
-  const o = opts || {};
-  const res = normalizeAll(labels, o);
-  const candidates = toCandidates(res);
-  const allFallback = !!(res.degrade === 'all-fallback');
-
-  return {
-    candidates,
-    defaultIndex: 0,
-    upper: res.upper,
-    upperGua: res.upperGua,
-    allFallback,
-    hint: allFallback
-      ? '照片中的元素暂未识别出可用物象，已按《说卦传》方位取卦，你可以在下方手动选一个物象。'
-      : '识别到 ' + candidates.filter(function (c) { return c.matched; }).length +
-        ' 个可用物象，已取画面主体「' + res.upper + '」起卦。若与你想取的不符，点下方任一项即可改卦。'
-  };
-}
 
 const API = {
   IMAGE_INDEX,
   normalizeOne,
-  normalizeAll,
-  toCandidates,
-  prepareForUI,
   searchImages,
   flattenLibrary,
   cleanLabel,

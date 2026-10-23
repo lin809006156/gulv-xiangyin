@@ -1,5 +1,5 @@
 /**
- * 学易心音 · Service Worker
+ * 古律象音 · Service Worker
  * ---------------------------------------------------------------
  * 离线可用策略：
  *   应用外壳（HTML/CSS/JS/图标）→ 预缓存 + Cache First
@@ -8,7 +8,7 @@
  * 音频为实时合成，不产生网络请求，无需缓存策略。
  */
 
-const CACHE = 'guaxiang-xinyin-v3';
+const CACHE = 'gulv-xiangyin-v4';
 
 const SHELL = [
   './',
@@ -23,7 +23,6 @@ const SHELL = [
   './core/render.js',
   './core/player.js',
   './core/recognize.js',
-  './core/vision.js',
   './js/learn.js',
   './js/app.js',
   './assets/icon.svg',

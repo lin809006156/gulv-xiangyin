@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">学易心音</string>
-    <string name="title_activity_main">学易心音</string>
-    <string name="package_name">com.guaxiang.xinyin</string>
-    <string name="custom_url_scheme">com.guaxiang.xinyin</string>
+    <string name="app_name">古律象音</string>
+    <string name="title_activity_main">古律象音</string>
+    <string name="package_name">com.gulv.xiangyin</string>
+    <string name="custom_url_scheme">com.gulv.xiangyin</string>
 </resources>

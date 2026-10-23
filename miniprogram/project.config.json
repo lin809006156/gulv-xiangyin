@@ -1,5 +1,5 @@
 {
-  "description": "学易心音 · 每日观象起卦小程序",
+  "description": "古律象音 · 每日观象起卦小程序",
   "packOptions": {
     "ignore": [],
     "include": []
@@ -48,7 +48,7 @@
   "compileType": "miniprogram",
   "libVersion": "3.5.5",
   "appid": "wxc98a73689cb1ca7a",
-  "projectname": "guaxiang-xinyin",
+  "projectname": "gulv-xiangyin",
   "miniprogramRoot": "./",
   "condition": {},
   "editorSetting": {

@@ -303,9 +303,13 @@ Node 与小程序仍烘进 PCM，保证导出 WAV 与小程序端听感一致。
 ### 导入运行
 
 1. 安装 [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)
-2. 打开工具 → 导入项目 → 选择 `miniprogram/` 目录
-3. AppID 处选「测试号」（`project.config.json` 中已填 `touristappid`）
-4. 编译即可运行
+2. 打开工具 → 导入项目 → 目录选 `miniprogram/`
+3. AppID 用 `wxc98a73689cb1ca7a`（已写进 `project.config.json`，导入时自动带出）
+4. 编译即可运行；点「预览」扫码在真机上验
+
+> **完整的更新与发布流程（同步 → 导入 → 预览 → 传云函数 → 上传 → 审核 → 发布）见
+> [`miniprogram/发布指南.md`](miniprogram/发布指南.md)**，含云开发环境开通、
+> 用户隐私保护指引填写与上架红线清单。
 
 ### 工程结构
 

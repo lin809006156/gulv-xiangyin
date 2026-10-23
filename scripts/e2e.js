@@ -453,6 +453,7 @@ class CDP {
   const gen = await cdp.send('Runtime.evaluate', {
     expression: `(async () => {
       const out = {};
+      const p = window.__gxPlayer;
       out.defaultCast = !!document.querySelector('#pageCast.is-active');
       out.noProgressBar = !document.querySelector('#progressTrack');
       out.hasGenNow = !!document.querySelector('#genNow');
@@ -466,11 +467,29 @@ class CDP {
       out.genRound = (document.querySelector('#genRound')||{}).textContent || '';
       out.playText = (document.querySelector('#btnPlayText')||{}).textContent || '';
       out.tip = (document.querySelector('#playerTip')||{}).textContent || '';
-      // 停止
+      // 浮动播放栏：播放中应滑出
+      out.mpHiddenDuring = document.querySelector('#miniPlayer').hidden;
+      out.mpPlaying = document.querySelector('#miniPlayer').classList.contains('is-playing');
+      out.mpTitle = (document.querySelector('#mpTitle')||{}).textContent || '';
+      out.mpSub = (document.querySelector('#mpSub')||{}).textContent || '';
+      out.mpBtns = ['#mpPlay','#mpLoop','#mpVol'].every(s => !!document.querySelector(s));
+      // 播放中再点一次：是「暂停」（无独立停止键），音乐挂起而非结束
       document.querySelector('#btnPlay').click();
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise(r => setTimeout(r, 500));
       out.playTextAfter = (document.querySelector('#btnPlayText')||{}).textContent || '';
+      out.pausedAfter = p.paused;
+      out.liveText = (document.querySelector('#playerLiveText')||{}).textContent || '';
+      // 点第三次：从原处继续
+      document.querySelector('#btnPlay').click();
+      await new Promise(r => setTimeout(r, 500));
+      out.playTextThird = (document.querySelector('#btnPlayText')||{}).textContent || '';
+      out.resumed = !p.paused;
+      // 停止由「切换卦象」完成
+      window.__gxCastHexagram(11);
+      await new Promise(r => setTimeout(r, 500));
+      out.playTextAfterCast = (document.querySelector('#btnPlayText')||{}).textContent || '';
       out.liveHidden = document.querySelector('#playerLive').hidden;
+      out.mpHiddenAfterCast = document.querySelector('#miniPlayer').hidden;
       return out;
     })()`,
     awaitPromise: true,
@@ -492,8 +511,22 @@ class CDP {
   arcHit.length
     ? ok(`轮次标注宏曲式阶段「${arcHit[0]}」（八段一循环）`)
     : err(`未显示宏曲式阶段名：${gv.genRound}`);
-  gv.playText === '停止' ? ok('播放中主按钮变为「停止」') : err('播放按钮状态异常');
-  (gv.playTextAfter === '播放' && gv.liveHidden) ? ok('再点一次停止，状态复位') : err('停止后状态未复位');
+  gv.playText === '暂停' ? ok('播放中主按钮变为「暂停」（无独立停止键）') : err('播放按钮状态异常');
+  (gv.playTextAfter === '继续' && gv.pausedAfter === true)
+    ? ok('再点一次即暂停：音乐挂起在原处，按钮转「继续」')
+    : err(`暂停异常（text=${gv.playTextAfter} paused=${gv.pausedAfter}）`);
+  (gv.resumed && gv.playTextThird === '暂停')
+    ? ok('第三次点按：从原处继续（无缝）')
+    : err(`继续异常（resumed=${gv.resumed} text=${gv.playTextThird}）`);
+  (gv.playTextAfterCast === '播放' && gv.liveHidden)
+    ? ok('切换卦象即停止：状态复位')
+    : err(`切换卦象未停止（text=${gv.playTextAfterCast} hidden=${gv.liveHidden}）`);
+  (!gv.mpHiddenDuring && gv.mpPlaying && gv.mpBtns && gv.mpTitle.indexOf('心音') < 0 && gv.mpTitle.length > 1)
+    ? ok(`浮动播放栏播放中滑出：${gv.mpTitle}（${gv.mpSub}），含播放/循环/音量键`)
+    : err(`浮动栏播放态异常（hidden=${gv.mpHiddenDuring} playing=${gv.mpPlaying} btns=${gv.mpBtns}）`);
+  (gv.mpHiddenAfterCast)
+    ? ok('停止后浮动栏收起')
+    : err('停止后浮动栏未收起');
 
   /* ---------- 2i. 音层面板：疗愈九频 + 自然五层 ---------- */
   console.log('\n【2i】音层面板');
@@ -561,28 +594,28 @@ class CDP {
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
       const out = {};
       const p = window.__gxPlayer;
-      const pauseBtn = document.querySelector('#btnPause');
-      out.exists = !!pauseBtn;
+      const playBtn = document.querySelector('#btnPlay');
+      out.exists = !!playBtn;
+      out.noStopBtn = !document.querySelector('#btnPause');   // 独立的停止/暂停键已合并
       // 先起播（上一节结束时已停）
-      document.querySelector('#btnPlay').click();
+      playBtn.click();
       await sleep(3000);
-      out.disabledBefore = pauseBtn.disabled;
       out.playing = p.isPlaying;
-      // 暂停
-      pauseBtn.click();
+      // 暂停（同一个大按钮）
+      playBtn.click();
       await sleep(500);
       out.paused = p.paused;
-      out.pauseText = document.querySelector('#btnPauseText').textContent;
+      out.pauseText = document.querySelector('#btnPlayText').textContent;
       out.liveText = (document.querySelector('#playerLiveText')||{}).textContent || '';
       // 暂停期间不应重新编曲：同一份 PCM 对象
       const pcmBefore = p._gen && p._gen.rounds[0] ? p._gen.rounds[0].pcm : null;
       await sleep(700);
       out.pcmSame = !!(p._gen && p._gen.rounds[0] && p._gen.rounds[0].pcm === pcmBefore);
       // 继续
-      pauseBtn.click();
+      playBtn.click();
       await sleep(500);
       out.resumed = !p.paused;
-      out.pauseText2 = document.querySelector('#btnPauseText').textContent;
+      out.pauseText2 = document.querySelector('#btnPlayText').textContent;
       out.pcmSame2 = !!(p._gen && p._gen.rounds[0] && p._gen.rounds[0].pcm === pcmBefore);
       out.liveText2 = (document.querySelector('#playerLiveText')||{}).textContent || '';
       return out;
@@ -591,9 +624,10 @@ class CDP {
     returnByValue: true
   });
   const pz2 = pz.result.value;
-  (pz2.exists && pz2.playing && pz2.paused === true && pz2.pauseText === '继续' && pz2.liveText === '已暂停')
-    ? ok('暂停：音乐挂起在原处，界面转为「继续 / 已暂停」')
-    : err(`暂停异常（paused=${pz2.paused} text=${pz2.pauseText} live=${pz2.liveText}）`);
+  (pz2.exists && pz2.noStopBtn && pz2.playing && pz2.paused === true
+    && pz2.pauseText === '继续' && pz2.liveText === '已暂停')
+    ? ok('播放/暂停/继续合为一个显眼大按钮（无独立停止键）')
+    : err(`暂停异常（paused=${pz2.paused} text=${pz2.pauseText} live=${pz2.liveText} stopBtn=${pz2.noStopBtn}）`);
   (pz2.pcmSame && pz2.pcmSame2)
     ? ok('继续：从同一份音频接着放（未重新编曲，故无缝）')
     : err('暂停/继续期间音频被重新编曲（不是无缝）');
@@ -694,6 +728,103 @@ class CDP {
     ? ok('画质档：高清 / 性能 可切换')
     : err(`画质档异常（segs=${ac.qualitySegs} on=${ac.qualityOn}）`);
 
+  /* ---------- 2i-0d. 浮动播放栏：播放/暂停/循环/音量 四键联动 ---------- */
+  console.log('\\n【2i-0d】浮动播放栏');
+  const mpc = await cdp.send('Runtime.evaluate', {
+    expression: `(async () => {
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+      const out = {};
+      const mp = document.querySelector('#miniPlayer');
+      const p = window.__gxPlayer;
+      // 起播（浮动栏应已在 2e-3 后收起）
+      document.querySelector('#btnPlay').click();
+      await sleep(2600);
+      out.shown = !mp.hidden;
+      out.playIconIsPause = getComputedStyle(document.querySelector('.mp-ico-pause')).display !== 'none';
+      // 浮动栏的播放键 → 暂停
+      document.querySelector('#mpPlay').click();
+      await sleep(500);
+      out.pausedByMp = p.paused;
+      out.playIconIsPlay = getComputedStyle(document.querySelector('.mp-ico-play')).display !== 'none';
+      out.subPaused = (document.querySelector('#mpSub')||{}).textContent || '';
+      // 浮动栏的循环键 → 与主按钮同步
+      document.querySelector('#mpLoop').click();
+      await sleep(200);
+      out.loopByMp = p.loop;
+      out.loopMainBtn = document.querySelector('#btnLoop').getAttribute('aria-pressed');
+      out.loopMpBtn = document.querySelector('#mpLoop').getAttribute('aria-pressed');
+      document.querySelector('#mpLoop').click();
+      await sleep(150);
+      // 浮动栏的音量键 → 静音 / 恢复
+      document.querySelector('#mpVol').click();
+      await sleep(200);
+      out.muted = Number(document.querySelector('#volume').value) === 0;
+      out.muteClass = document.querySelector('#mpVol').classList.contains('is-mute');
+      document.querySelector('#mpVol').click();
+      await sleep(200);
+      out.restored = Number(document.querySelector('#volume').value) > 0;
+      // 继续播放后切卦象收栏
+      document.querySelector('#mpPlay').click();
+      await sleep(400);
+      window.__gxCastHexagram(11);
+      await sleep(400);
+      out.hiddenAfterCast = mp.hidden;
+      return out;
+    })()`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+  const mv = mpc.result.value;
+  (mv.shown && mv.playIconIsPause && mv.pausedByMp && mv.playIconIsPlay && mv.subPaused === '已暂停')
+    ? ok('浮动栏：播放中显示暂停图标，点按即暂停（图标转播放）')
+    : err(`浮动栏播放/暂停异常（shown=${mv.shown} paused=${mv.pausedByMp} sub=${mv.subPaused}）`);
+  (mv.loopByMp === true && mv.loopMainBtn === 'true' && mv.loopMpBtn === 'true')
+    ? ok('浮动栏循环键与音乐栏循环按钮双向同步')
+    : err(`浮动栏循环异常（player=${mv.loopByMp} main=${mv.loopMainBtn} mp=${mv.loopMpBtn}）`);
+  (mv.muted && mv.muteClass && mv.restored)
+    ? ok('浮动栏音量键可静音 / 恢复（图标同步变暗）')
+    : err(`浮动栏音量异常（muted=${mv.muted} class=${mv.muteClass} restored=${mv.restored}）`);
+  (mv.hiddenAfterCast)
+    ? ok('切换卦象后浮动栏收起')
+    : err('切换卦象后浮动栏未收起');
+
+  /* ---------- 2i-0c. 音量图标：SVG 三态 + 点按静音 ---------- */
+  console.log('\n【2i-0c】音量图标');
+  const vc = await cdp.send('Runtime.evaluate', {
+    expression: `(async () => {
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+      const out = {};
+      const btn = document.querySelector('#volBtn');
+      const slider = document.querySelector('#volume');
+      out.isBtn = !!btn;
+      out.hasSvg = !!btn.querySelector('svg');
+      out.noEmoji = !(btn.textContent || '').trim();      // 不再用彩色 emoji
+      const set = (v) => { slider.value = String(v); slider.dispatchEvent(new Event('input')); };
+      set(85); await sleep(120); out.high = btn.dataset.level;
+      set(30); await sleep(120); out.low = btn.dataset.level;
+      set(0);  await sleep(120); out.mute = btn.dataset.level;
+      out.ariaMute = btn.getAttribute('aria-label');
+      // 点按恢复
+      btn.click(); await sleep(150);
+      out.restored = Number(slider.value);
+      btn.click(); await sleep(150);
+      out.mutedAgain = Number(slider.value);
+      return out;
+    })()`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+  const volv = vc.result.value;
+  (volv.isBtn && volv.hasSvg && volv.noEmoji)
+    ? ok('音量图标为矢量 SVG（非 emoji 贴纸）')
+    : err(`音量图标异常（btn=${volv.isBtn} svg=${volv.hasSvg} emoji=${volv.noEmoji}）`);
+  (volv.high === 'high' && volv.low === 'low' && volv.mute === 'mute' && volv.ariaMute.indexOf('已静音') >= 0)
+    ? ok(`图标随音量三态变化（高 ${volv.high} / 低 ${volv.low} / 静音 ${volv.mute}）`)
+    : err(`图标三态异常（high=${volv.high} low=${volv.low} mute=${volv.mute}）`);
+  (volv.restored > 0 && volv.mutedAgain === 0)
+    ? ok('点按图标可静音 / 恢复')
+    : err(`点按静音异常（restored=${volv.restored} muted=${volv.mutedAgain}）`);
+
   /* ---------- 2i-1b. 外观皮肤：三种可选、即时生效并记住 ---------- */
   console.log('\n【2i-1b】外观皮肤');
   const sk = await cdp.send('Runtime.evaluate', {
@@ -732,6 +863,10 @@ class CDP {
       // 切回纸本
       document.querySelector('#skinList .skin-opt[data-key="paper"]').click();
       out.backSkin = document.documentElement.getAttribute('data-skin');
+      // 作者栏：本 App 作者的联系方式
+      out.author = (document.querySelector('#settingsSheet .set-value')||{}).textContent || '';
+      out.mail = (document.querySelector('#authorEmail')||{}).textContent || '';
+      out.copyBtn = !!document.querySelector('#btnCopyEmail');
       return out;
     })()`,
     returnByValue: true
@@ -740,17 +875,15 @@ class CDP {
   (skv.gear && skv.sheetHiddenBefore && skv.sheetOpen && skv.sheetHiddenAfter)
     ? ok('顶栏齿轮打开设置页，可开可关')
     : err(`设置页开合异常（gear=${skv.gear} open=${skv.sheetOpen}）`);
-  out.nick = (document.querySelector('#setNickname')||{}).value || '';
-  out.mail = (document.querySelector('#setEmail')||{}).value || '';
+  (skv.author === '芦荟汁' && skv.mail === '809006156@qq.com' && skv.copyBtn)
+    ? ok(`作者栏：${skv.author} · ${skv.mail}（可一键复制）`)
+    : err(`作者栏内容异常（author=${skv.author} mail=${skv.mail} copy=${skv.copyBtn}）`);
   (skv.groups.indexOf('外观') >= 0 && skv.groups.indexOf('文字') >= 0
     && skv.groups.indexOf('播放') >= 0 && skv.groups.indexOf('数据') >= 0
-    && skv.groups.indexOf('我') >= 0)
+    && skv.groups.indexOf('作者') >= 0)
     ? ok(`设置页分组：${skv.groups}`)
     : err(`设置页分组缺失：${skv.groups}`);
   (skv.count === 3 && skv.hasSwatch) ? ok(`外观可选三种：${skv.names}`) : err(`外观选项异常（count=${skv.count}）`);
-  (skv.nick === '芦荟汁' && skv.mail === '809006156@qq.com')
-    ? ok(`「我」已填：${skv.nick} · ${skv.mail}`)
-    : err(`「我」内容异常（nick=${skv.nick} mail=${skv.mail}）`);
   (skv.fonts === 3 && skv.font === 'l')
     ? ok('字号三档可切（大档已作用于 <html data-font>）')
     : err(`字号切换异常（seg=${skv.fonts} attr=${skv.font}）`);

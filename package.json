@@ -1,7 +1,7 @@
 {
   "name": "guaxiang-xinyin",
-  "version": "1.0.1",
-  "description": "卦象心音 · 每日观象起卦，为每一卦生成一段心音",
+  "version": "1.0.2",
+  "description": "学易心音 · 每日观象起卦，为每一卦生成一段心音",
   "private": true,
   "scripts": {
     "sync": "node scripts/sync-core.js",

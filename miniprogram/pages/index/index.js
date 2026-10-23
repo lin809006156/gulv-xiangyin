@@ -1,5 +1,5 @@
 /**
- * 卦象心音 · 首页（起卦）
+ * 学易心音 · 首页（起卦）
  * ---------------------------------------------------------------
  * 三种起卦方式：每日一卦 / 观象起卦 / 数字起卦
  * 起卦后展示卦象与心音播放器
@@ -350,12 +350,12 @@ Page({
   },
 
   shareApp() {
-    const name = this.data.name || '卦象心音';
+    const name = this.data.name || '学易心音';
     wx.showShareMenu({ withShareTicket: true, menus: ['shareAppMessage'] });
   },
 
   onShareAppMessage() {
-    const name = this.data.name || '卦象心音';
+    const name = this.data.name || '学易心音';
     const hint = this.data.hint || '观身边之物，每日起一卦';
     return {
       title: `今日之卦 · ${name}`,

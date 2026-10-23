@@ -7,8 +7,8 @@
 <meta name="description" content="观身边之物起卦，为每一卦生成一段心音。传统文化与艺术创作，不含预测功效。">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="卦象心音">
-<title>卦象心音 · 每日观象起卦</title>
+<meta name="apple-mobile-web-app-title" content="学易心音">
+<title>学易心音 · 每日观象起卦</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
@@ -24,7 +24,7 @@
       <div class="brand">
         <span class="brand-mark">卦</span>
         <div class="brand-text">
-          <h1>卦象心音</h1>
+          <h1>学易心音</h1>
           <p>观身边之物 · 每日起一卦 · 生一段心音</p>
         </div>
       </div>
@@ -139,25 +139,27 @@
         </div>
       </section>
 
-      <!-- 我 -->
+      <!-- 作者（本 App 的作者联系方式） -->
       <section class="set-group">
-        <h3 class="set-title">我</h3>
-        <p class="set-desc">用于标识本机的使用者，仅存在这台设备上。</p>
+        <h3 class="set-title">作者</h3>
+        <p class="set-desc">这个 App 的作者。反馈、交流、想听哪一卦的心音，都欢迎来信。</p>
         <div class="set-row">
-          <span class="set-label">昵称</span>
-          <input class="set-input" type="text" id="setNickname" maxlength="24" placeholder="怎么称呼你">
+          <span class="set-label">作者</span>
+          <span class="set-value">芦荟汁</span>
         </div>
         <div class="set-row">
           <span class="set-label">邮箱</span>
-          <input class="set-input" type="email" id="setEmail" maxlength="64" placeholder="name@example.com">
+          <span class="set-value" id="authorEmail">809006156@qq.com</span>
+          <button class="btn btn-ghost btn-sm" id="btnCopyEmail" type="button">复制</button>
         </div>
+        <p class="set-note">来信即视为同意把内容用于改进这个应用；不会转发给任何第三方。</p>
       </section>
 
       <!-- 关于 -->
       <section class="set-group">
         <h3 class="set-title">关于</h3>
         <p class="set-about">
-          <b>卦象心音</b> · 以《周易》卦象与古代律吕文化为灵感，
+          <b>学易心音</b> · 以《周易》卦象与古代律吕文化为灵感，
           为每一卦生成一段供赏析与静心的音乐。属传统文化与艺术创作，
           <b>不含任何预测功效</b>；五音之说为传统音乐与养生观念，非现代医学结论。
         </p>
@@ -325,7 +327,7 @@
     </section>
 
     <!-- ==================================================
-         页二 · 音乐（当前卦象心音 + 播放器 + 乐器园试听）
+         页二 · 音乐（当前卦心音 + 播放器 + 乐器园试听）
          ================================================== -->
     <section class="page" id="pageMusic">
 
@@ -381,9 +383,6 @@
             <span id="btnPlayIcon" class="play-icon">▶</span>
             <span id="btnPlayText">播放</span>
           </button>
-          <button class="btn btn-ghost btn-sm" id="btnPause" disabled title="暂停：音乐停在原处；再按即从原处接上（无缝）">
-            <span class="pause-icon">⏸</span><span id="btnPauseText">暂停</span>
-          </button>
           <button class="btn btn-ghost btn-solf" id="btnSolf" aria-pressed="false"
                   title="疗愈音层：以索菲吉奥频率（当代音疗流派所用）在五声之下极轻铺底，可随时关闭；非古律，亦不涉疗效">
             <span class="solf-icon">◍</span>
@@ -394,7 +393,16 @@
           </button>
           <button class="btn btn-ghost" id="btnExport">导出 WAV</button>
           <div class="volume">
-            <span class="vol-icon">🔊</span>
+            <button class="vol-btn" id="volBtn" type="button" data-level="high"
+                    aria-label="音量，点按静音" title="点按静音">
+              <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
+                <path class="vol-body"
+                  d="M4.1 9.3h2.7L11 5.2c.55-.52 1.45-.13 1.45.62v12.36c0 .75-.9 1.14-1.45.62l-4.2-4.1H4.1c-.66 0-1.2-.54-1.2-1.2v-3c0-.66.54-1.2 1.2-1.2Z"/>
+                <path class="vol-wave vol-w1" d="M15.1 9.2a4.1 4.1 0 0 1 0 5.6"/>
+                <path class="vol-wave vol-w2" d="M17.9 6.6a7.8 7.8 0 0 1 0 10.8"/>
+                <path class="vol-mute" d="M15.9 9.9l4.6 4.6M20.5 9.9l-4.6 4.6"/>
+              </svg>
+            </button>
             <input type="range" id="volume" min="0" max="100" value="85">
           </div>
         </div>
@@ -475,6 +483,29 @@
     </footer>
 
   </main>
+
+  <!-- ============ 浮动播放栏（播放时滑出，像音乐软件的 mini player） ============ -->
+  <div class="miniplayer" id="miniPlayer" hidden>
+    <div class="mp-wave" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="mp-info">
+      <span class="mp-title" id="mpTitle">心音</span>
+      <span class="mp-sub" id="mpSub">即兴中</span>
+    </div>
+    <button class="mp-btn" id="mpPlay" type="button" aria-label="播放 / 暂停">
+      <svg class="mp-ico-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.6v14.8c0 .8.9 1.3 1.6.9l11.2-7.4c.6-.4.6-1.4 0-1.8L8.6 3.7C7.9 3.3 7 3.8 7 4.6Z"/></svg>
+      <svg class="mp-ico-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.6"/><rect x="14" y="4" width="4" height="16" rx="1.6"/></svg>
+    </button>
+    <button class="mp-btn mp-btn-sm" id="mpLoop" type="button" aria-pressed="false" aria-label="循环">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6h9a4 4 0 0 1 4 4v1.6h-2.4V10a1.8 1.8 0 0 0-1.8-1.8H7.8v2.6L4 7.4 7.8 3.4V6Zm10 12H8a4 4 0 0 1-4-4v-1.6h2.4V14A1.8 1.8 0 0 0 8.2 15.8h10v-2.6L20 16.6 16.2 20.6V18Z"/></svg>
+    </button>
+    <button class="mp-btn mp-btn-sm" id="mpVol" type="button" aria-label="音量">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="mpv-body" d="M4.1 9.3h2.7L11 5.2c.55-.52 1.45-.13 1.45.62v12.36c0 .75-.9 1.14-1.45.62l-4.2-4.1H4.1c-.66 0-1.2-.54-1.2-1.2v-3c0-.66.54-1.2 1.2-1.2Z"/>
+        <path class="mpv-wave mpv-w1" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" d="M15.1 9.2a4.1 4.1 0 0 1 0 5.6"/>
+        <path class="mpv-wave mpv-w2" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" d="M17.9 6.6a7.8 7.8 0 0 1 0 10.8"/>
+      </svg>
+    </button>
+  </div>
 
   <!-- ============ 底部玻璃标签栏 ============ -->
   <nav class="tabbar" id="tabbar">

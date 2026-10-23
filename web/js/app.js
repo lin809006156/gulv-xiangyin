@@ -1,5 +1,5 @@
 /**
- * 卦象心音 · APP 主控（iPhone 玻璃拟态版）
+ * 学易心音 · APP 主控（iPhone 玻璃拟态版）
  * ---------------------------------------------------------------
  * 职责：三栏导航、界面渲染、交互编排、播放控制、卦历存储、乐器试听
  * 依赖：core/data.js、core/hexagram.js、core/music.js、core/player.js
@@ -7,7 +7,7 @@
  *
  * 栏位：
  *   起卦 —— 每日一卦 / 观象起卦（含拍照识象）/ 数字起卦 + 卦象解读 + 卦历
- *   音乐 —— 当前卦象心音直达 + 播放器 + 乐器园（八音介绍与试听）
+ *   音乐 —— 当前卦心音直达 + 播放器 + 乐器园（八音介绍与试听）
  *   学易 —— 易经知识（由 learn.js 渲染）
  *
  * 与小程序版共用 core/ 全部逻辑，此处只做 DOM 适配。
@@ -32,6 +32,7 @@
   let currentScore = null;
   let isPlaying = false;
   let userPaused = false;      // 用户主动暂停（回到前台时不自动继续）
+  let lastVolume = 85;          // 静音前的音量（点图标恢复用）
   let selectedImage = null;
   /* 播放目标：'hex' 卦象之音（即兴连播） | { type:'inst', voice } 乐器试听 */
   let playTarget = null;
@@ -227,9 +228,6 @@
   ];
   let skin = 'paper';
   let fontSize = 'm';
-  // 「我」：昵称与邮箱（仅存本机 localStorage，不上传任何地方）
-  const ME = { nickname: '芦荟汁', email: '809006156@qq.com' };
-  let me = { nickname: ME.nickname, email: ME.email };
 
   /** 应用皮肤：改 <html data-skin> 即可整体换色 */
   function applySkin(key) {
@@ -352,6 +350,8 @@
         $('#volume').value = vol.value;
         $('#setVolumeNum').textContent = vol.value;
         player.setVolume(vol.value / 100);
+        lastVolume = Number(vol.value);
+        syncVolIcon(Number(vol.value));
       });
       vol.addEventListener('change', savePref);
     }
@@ -367,18 +367,30 @@
       });
       lv.addEventListener('change', savePref);
     }
-    // 「我」：昵称与邮箱
-    const nick = $('#setNickname');
-    if (nick) {
-      nick.value = me.nickname;
-      nick.addEventListener('input', () => { me.nickname = nick.value; });
-      nick.addEventListener('change', savePref);
-    }
-    const mail = $('#setEmail');
-    if (mail) {
-      mail.value = me.email;
-      mail.addEventListener('input', () => { me.email = mail.value; });
-      mail.addEventListener('change', savePref);
+    // 作者邮箱：一键复制（并给个简短反馈）
+    const copyBtn = $('#btnCopyEmail');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        const mail = ($('#authorEmail') || {}).textContent || '';
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(mail);
+          } else {
+            // 老 WebView 没有 clipboard API：用临时输入框兜底
+            const ta = document.createElement('textarea');
+            ta.value = mail;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          }
+          flashTip('邮箱已复制：' + mail);
+        } catch (e) {
+          flashTip('复制失败，请手动选中：' + mail);
+        }
+      });
     }
     // 卦历清空
     const clr = $('#btnClearHistory2');
@@ -429,7 +441,9 @@
       if (typeof pref.volume === 'number') {
         $('#volume').value = pref.volume;
         player.setVolume(pref.volume / 100);
+        lastVolume = pref.volume;
       }
+      syncVolIcon(Number($('#volume').value));
       if (pref.solfeggio && typeof pref.solfeggio === 'object') {
         ambient.sol.on = !!pref.solfeggio.on;
         if (typeof pref.solfeggio.freq === 'number') ambient.sol.freq = pref.solfeggio.freq;
@@ -455,10 +469,6 @@
       }
       if (pref.quality && VIZ_QUALITY[pref.quality]) {
         vizQuality = pref.quality;
-      }
-      if (pref.me && typeof pref.me === 'object') {
-        if (typeof pref.me.nickname === 'string') me.nickname = pref.me.nickname;
-        if (typeof pref.me.email === 'string') me.email = pref.me.email;
       }
       if (typeof pref.loop === 'boolean') {
         player.setLoop(pref.loop);
@@ -487,8 +497,7 @@
         skin,
         font: fontSize,
         quality: vizQuality,
-        loop: player.loop,
-        me: { nickname: me.nickname, email: me.email }
+        loop: player.loop
       }));
     } catch (e) { /* 忽略 */ }
   }
@@ -785,15 +794,36 @@
     $('#btnNumber').addEventListener('click', castNumber);
 
     $('#btnPlay').addEventListener('click', togglePlay);
-    $('#btnPause').addEventListener('click', togglePause);
     $('#btnLoop').addEventListener('click', toggleLoop);
+    bindMiniPlayer();
     $('#btnExport').addEventListener('click', exportWav);
     $('#btnClearHistory').addEventListener('click', clearHistory);
 
     $('#volume').addEventListener('input', (e) => {
       player.setVolume(e.target.value / 100);
+      lastVolume = Number(e.target.value);
+      syncVolIcon(Number(e.target.value));
+      syncMpVolIcon();
     });
     $('#volume').addEventListener('change', savePref);
+    // 图标点按：静音 / 恢复
+    const volBtn = $('#volBtn');
+    if (volBtn) {
+      volBtn.addEventListener('click', () => {
+        const cur = Number($('#volume').value);
+        if (cur > 0) {
+          lastVolume = cur;
+          $('#volume').value = '0';
+          player.setVolume(0);
+        } else {
+          const back = lastVolume > 0 ? lastVolume : 60;
+          $('#volume').value = String(back);
+          player.setVolume(back / 100);
+        }
+        syncVolIcon(Number($('#volume').value));
+        savePref();
+      });
+    }
 
     $('#btnSolf').addEventListener('click', toggleSolfeggio);
 
@@ -882,12 +912,14 @@
     renderMusicParams(music);
     renderClassics(result);
 
-    /* ---------- 音乐栏：卦象心音直达 ---------- */
+    /* ---------- 音乐栏：当前卦心音直达 ---------- */
     // 即兴连播不需要预先渲染整曲：卦象与配置在此定好，
     // 每次播放都按「卦象逻辑 + 时间种子 + 随机变体 + 宏曲式阶段」现场编曲。
     // 导出的乐谱取「呈示」阶段（含轮内发展手法），避免导出旧式原样复读的一段。
     currentScore = M.composeNotes(hex, music, result.changedMusic, { form: 'chengshi' });
     renderWavePreview();
+    const mpT = $('#mpTitle');
+    if (mpT) mpT.textContent = hex.name;
     // 预热：在 Worker 后台把第一段编好放着，按下播放即刻出声（不必等那一秒多）
     try { player.warmup(hex, music, result.changedMusic, buildAmbient()); } catch (e) { /* 无 Worker 则回退 */ }
     // 每卦配一支建议疗愈频率（同卦同频），用户可在「音层」另选
@@ -1114,25 +1146,27 @@
    * 播放控制
    * =============================================================== */
 
+  /**
+   * 显眼大按钮：播放 → 暂停 → 继续（三态合一）
+   * ---------------------------------------------------------------
+   * 没有独立的「停止」键 —— 暂停是挂起音频时间轴（无缝接续），
+   * 彻底停止由「切换卦象 / 关闭音层」等页面动作完成。
+   */
   function togglePlay() {
     if (isPlaying) {
-      stopPlayback();
+      if (player.paused) {
+        // 继续：从挂起处接着放（无缝）
+        player.resume();
+        userPaused = false;
+        setPlayState('playing');
+        setFlowState('playing');
+      } else {
+        // 暂停：挂起音频时间轴，音乐停在原处
+        pausePlayback();
+      }
       return;
     }
     startGenerative();
-  }
-
-  /** 暂停 / 继续：挂起与恢复同一条音频时间轴，故从原处接上，无缝 */
-  function togglePause() {
-    if (!isPlaying) return;
-    if (player.paused) {
-      player.resume();
-      userPaused = false;
-      setPlayState('playing');
-      setFlowState('playing');
-    } else {
-      pausePlayback();
-    }
   }
 
   /** 暂停：挂起音频时间轴，音乐停在原处；雾也随声而定格 */
@@ -1144,6 +1178,20 @@
     setFlowState('paused');
   }
 
+  /** 设置页里的简短反馈（借用播放器提示条，不另做 toast） */
+  let tipTimer = null;
+  function flashTip(text) {
+    const tip = $('#playerTip');
+    if (!tip) return;
+    if (!tip.dataset.orig) tip.dataset.orig = tip.textContent;
+    tip.textContent = text;
+    if (tipTimer) clearTimeout(tipTimer);
+    tipTimer = setTimeout(() => {
+      tip.textContent = tip.dataset.orig || tip.textContent;
+      tipTimer = null;
+    }, 2200);
+  }
+
   /** 循环：反复播放当前这一段，不再另编新段（与导出的 WAV 同一份乐谱） */
   function toggleLoop() {
     const on = player.toggleLoop();
@@ -1151,6 +1199,8 @@
     if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     const txt = $('#btnLoopText');
     if (txt) txt.textContent = on ? '循环中' : '循环';
+    const mpLoop = $('#mpLoop');
+    if (mpLoop) mpLoop.setAttribute('aria-pressed', on ? 'true' : 'false');
     savePref();
     return on;
   }
@@ -1212,29 +1262,100 @@
    * 暂停是**挂起音频时间轴**，恢复后从原处接上（无缝）；
    * 停止才是彻底结束（下一段要重新编曲，故有一秒多的准备时间）。
    */
+  /** 音量图标三态：静音 / 低 / 高（图标随音量变化，不用 emoji） */
+  function syncVolIcon(v) {
+    const btn = $('#volBtn');
+    if (!btn) return;
+    const val = Math.max(0, Math.min(100, Math.round(v)));
+    const level = val <= 0 ? 'mute' : (val < 50 ? 'low' : 'high');
+    btn.dataset.level = level;
+    btn.setAttribute('aria-label', level === 'mute' ? '已静音，点按恢复' : `音量 ${val}，点按静音`);
+  }
+
+  /**
+   * 播放按钮三态：播放（▶ 播放）/ 播放中（❚❚ 暂停）/ 暂停（▶ 继续）
+   * 同时同步浮动播放栏（mini player）的显示与图标。
+   */
   function setPlayState(state) {
     const icon = $('#btnPlayIcon');
     const text = $('#btnPlayText');
-    const pause = $('#btnPause');
-    const pauseText = $('#btnPauseText');
     if (!icon || !text) return;
-    if (state === 'paused') {
+    if (state === 'playing') {
       icon.textContent = '❚❚';
-      text.textContent = '停止';
-      if (pause) pause.disabled = false;
-      if (pauseText) pauseText.textContent = '继续';
-      $('#playerLiveText') && ($('#playerLiveText').textContent = '已暂停');
-    } else if (state === 'playing') {
-      icon.textContent = '❚❚';
-      text.textContent = '停止';
-      if (pause) pause.disabled = false;
-      if (pauseText) pauseText.textContent = '暂停';
+      text.textContent = '暂停';
       $('#playerLiveText') && ($('#playerLiveText').textContent = '即兴中');
+    } else if (state === 'paused') {
+      icon.textContent = '▶';
+      text.textContent = '继续';
+      $('#playerLiveText') && ($('#playerLiveText').textContent = '已暂停');
     } else {
       icon.textContent = '▶';
       text.textContent = '播放';
-      if (pause) pause.disabled = true;
-      if (pauseText) pauseText.textContent = '暂停';
+    }
+    syncMiniPlayer(state);
+  }
+
+  /* ===============================================================
+   * 浮动播放栏（mini player）
+   * ---------------------------------------------------------------
+   * 播放 / 暂停时滑出在底部标签栏上方，像音乐软件的浮动控制条：
+   * 曲名、状态、跳动音波、播放/暂停、循环、音量。点曲名区回音乐栏。
+   * =============================================================== */
+  function syncMiniPlayer(state) {
+    const mp = $('#miniPlayer');
+    if (!mp) return;
+    const show = (state === 'playing' || state === 'paused');
+    mp.hidden = !show;
+    mp.classList.toggle('is-playing', state === 'playing');
+    // 浮动栏会盖住页面底部，给内容留出空间（避免遮住最后一行）
+    document.body.classList.toggle('has-miniplayer', show);
+    const sub = $('#mpSub');
+    if (sub) sub.textContent = state === 'playing' ? '即兴中 · 心音' : '已暂停';
+    const title = $('#mpTitle');
+    if (title && currentResult) title.textContent = currentResult.hex.name;
+    // 循环态与音量态跟随
+    const loopBtn = $('#mpLoop');
+    if (loopBtn) loopBtn.setAttribute('aria-pressed', player.loop ? 'true' : 'false');
+    syncMpVolIcon();
+  }
+
+  function syncMpVolIcon() {
+    const btn = $('#mpVol');
+    if (!btn) return;
+    const v = Number($('#volume').value);
+    btn.classList.toggle('is-mute', v <= 0);
+  }
+
+  function bindMiniPlayer() {
+    const mp = $('#miniPlayer');
+    const mpPlay = $('#mpPlay');
+    if (mpPlay) mpPlay.addEventListener('click', togglePlay);
+    const mpLoop = $('#mpLoop');
+    if (mpLoop) mpLoop.addEventListener('click', toggleLoop);
+    const mpVol = $('#mpVol');
+    if (mpVol) {
+      mpVol.addEventListener('click', () => {
+        const cur = Number($('#volume').value);
+        if (cur > 0) {
+          lastVolume = cur;
+          $('#volume').value = '0';
+          player.setVolume(0);
+        } else {
+          const back = lastVolume > 0 ? lastVolume : 60;
+          $('#volume').value = String(back);
+          player.setVolume(back / 100);
+        }
+        syncVolIcon(Number($('#volume').value));
+        syncMpVolIcon();
+        savePref();
+      });
+    }
+    // 点信息区回到音乐栏
+    const info = mp.querySelector('.mp-info');
+    if (info) {
+      info.addEventListener('click', () => {
+        document.querySelector('.tabbtn[data-page="music"]').click();
+      });
     }
   }
 
@@ -1402,9 +1523,9 @@
       const blob = new Blob([buf], { type: 'audio/wav' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      const name = currentResult ? currentResult.hex.name : '卦象心音';
+      const name = currentResult ? currentResult.hex.name : '学易心音';
       a.href = url;
-      a.download = `${name}-卦象心音.wav`;
+      a.download = `${name}-学易心音.wav`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

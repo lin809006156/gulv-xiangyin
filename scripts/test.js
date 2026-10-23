@@ -1,5 +1,5 @@
 /**
- * 卦象心音 · 起卦与作曲链路测试
+ * 学易心音 · 起卦与作曲链路测试
  * 运行：node scripts/test.js
  */
 const D = require('../core/data.js');

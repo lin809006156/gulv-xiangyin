@@ -11,7 +11,7 @@ const D = require('../core/data.js');
 const M = require('../core/music.js');
 const R = require('../core/render.js');
 
-console.log('=== 卦象心音 · 渲染性能基准 ===\n');
+console.log('=== 学易心音 · 渲染性能基准 ===\n');
 
 /* ---------- 1. 单卦渲染耗时 ---------- */
 const hex = D.getHexagram(1);

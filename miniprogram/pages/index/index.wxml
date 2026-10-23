@@ -1,4 +1,4 @@
-<!-- 卦象心音 · 首页 -->
+<!-- 学易心音 · 首页 -->
 <view class="page">
 
   <!-- ============ 顶部 ============ -->
@@ -6,7 +6,7 @@
     <view class="brand">
       <text class="brand-mark">卦</text>
       <view class="brand-text">
-        <text class="brand-title">卦象心音</text>
+        <text class="brand-title">学易心音</text>
         <text class="brand-sub">观身边之物 · 每日起一卦 · 生一段心音</text>
       </view>
     </view>

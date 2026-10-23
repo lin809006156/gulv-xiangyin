@@ -1,5 +1,5 @@
 /* ===============================================================
-   卦象心音 · 样式（iPhone 玻璃拟态 · Liquid Glass）
+   学易心音 · 样式（iPhone 玻璃拟态 · Liquid Glass）
    ---------------------------------------------------------------
    视觉取意：宣纸为底、墨色为字、朱砂点睛；
    界面语言取法 iOS 玻璃材质：半透明磨砂面板、悬浮底部标签栏、
@@ -1009,7 +1009,45 @@ body {
   gap: 8px;
   margin-left: auto;
 }
-.vol-icon { font-size: 14px; }
+/* 音量按钮：iOS 液态玻璃风的喇叭（不用 emoji：emoji 是彩色贴纸，不合整体质感） */
+.vol-btn {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--ink-2);
+  background: transparent;
+  transition: background .16s ease, color .16s ease, transform .16s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.vol-btn:hover { background: rgba(var(--tint),.62); color: var(--ink); }
+.vol-btn:active { transform: scale(.9); }
+.vol-btn svg { display: block; }
+.vol-body { fill: currentColor; }
+.vol-wave {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+}
+.vol-mute {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  display: none;
+}
+/* 三态：静音 / 低 / 高 */
+.vol-btn[data-level="mute"] .vol-wave { display: none; }
+.vol-btn[data-level="mute"] .vol-mute { display: block; }
+.vol-btn[data-level="mute"] { color: var(--ink-4); }
+.vol-btn[data-level="low"] .vol-w2 { display: none; }
 .volume input {
   width: 84px;
   accent-color: var(--cinnabar);
@@ -2139,3 +2177,139 @@ html[data-font="l"] { --tabbar-h: 70px; }
 
 .pause-icon { margin-right: 4px; font-size: 12px; }
 #btnPause:disabled { opacity: .45; }
+
+/* ---- 设置页「作者」---- */
+.set-value {
+  font-size: 13px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.set-note {
+  font-size: 11px;
+  color: var(--ink-4);
+  line-height: 1.7;
+  margin-top: 4px;
+}
+#btnCopyEmail { margin-left: auto; }
+
+/* ===============================================================
+   浮动播放栏（mini player，播放时滑出，贴在底部标签栏上方）
+   =============================================================== */
+.miniplayer {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: calc(var(--tabbar-h) + 8px);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 54px;
+  padding: 0 10px 0 12px;
+  border-radius: 20px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow:
+    0 1px 0 var(--glass-brd) inset,
+    0 0 0 1px var(--glass-brd-out),
+    0 10px 30px rgba(16,26,36,.26);
+  animation: mpIn .26s cubic-bezier(.2,.85,.3,1);
+}
+@keyframes mpIn {
+  from { transform: translateY(calc(100% + 24px)); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.miniplayer[hidden] { display: none !important; }
+
+/* 跳动的音波条（播放中才动） */
+.mp-wave {
+  display: flex;
+  align-items: flex-end;
+  gap: 2.5px;
+  height: 18px;
+  flex: none;
+}
+.mp-wave i {
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--cinnabar-lt), var(--cinnabar));
+  height: 30%;
+}
+.mp-wave i:nth-child(2) { height: 70%; }
+.mp-wave i:nth-child(3) { height: 45%; }
+.mp-wave i:nth-child(4) { height: 85%; }
+.miniplayer.is-playing .mp-wave i {
+  animation: mpWave 1s ease-in-out infinite;
+}
+.miniplayer.is-playing .mp-wave i:nth-child(2) { animation-duration: .78s; }
+.miniplayer.is-playing .mp-wave i:nth-child(3) { animation-duration: 1.24s; }
+.miniplayer.is-playing .mp-wave i:nth-child(4) { animation-duration: .9s; }
+@keyframes mpWave {
+  0%, 100% { transform: scaleY(.35); }
+  50%      { transform: scaleY(1); }
+}
+.mp-wave i { transform-origin: bottom; transition: transform .3s ease; }
+
+/* 曲名 / 状态 */
+.mp-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.mp-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: .04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mp-sub {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+/* 按键 */
+.mp-btn {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  color: var(--cinnabar);
+  background: rgba(var(--tint),.72);
+  box-shadow: 0 0 0 1px var(--glass-brd-out), 0 3px 12px rgba(178,58,46,.16);
+  transition: transform .16s ease, background .16s ease, color .16s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.mp-btn:active { transform: scale(.9); }
+.mp-btn svg { width: 20px; height: 20px; fill: currentColor; }
+.mp-ico-pause { display: none; }
+.miniplayer.is-playing .mp-ico-play { display: none; }
+.miniplayer.is-playing .mp-ico-pause { display: block; }
+.mp-btn-sm {
+  width: 36px;
+  height: 36px;
+  color: var(--ink-2);
+  background: transparent;
+  box-shadow: none;
+}
+.mp-btn-sm svg { width: 17px; height: 17px; }
+.mp-btn-sm:active { background: rgba(var(--tint),.6); }
+.mp-btn-sm[aria-pressed="true"] {
+  color: var(--cinnabar);
+  background: rgba(var(--tint),.6);
+}
+/* 静音时音量图标变暗并画斜杠（用透明度近似，避免再加一个 svg） */
+.mp-btn-sm.is-mute { color: var(--ink-4); }
+.mp-btn-sm.is-mute .mpv-wave { opacity: .25; }
+
+/* 浮动栏显示时，给页面内容留出空间（浮动栏高 54 + 间距 8） */
+body.has-miniplayer main,
+body.has-miniplayer .sheet-body {
+  padding-bottom: calc(var(--tabbar-h) + 34px + 62px);
+}

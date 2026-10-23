@@ -114,7 +114,7 @@ class CDP {
   await new Promise((r) => setTimeout(r, 4200));
   await shot('web-music-playing.png');
   await cdp.send('Runtime.evaluate', { expression: `document.querySelector('#btnPlay').click()` });
-  await new Promise((r) => setTimeout(r, 300));
+  await new Promise((r) => setTimeout(r, 2600));
 
   // 播放控制区（含新的暂停/继续按钮）单独截一张
   {

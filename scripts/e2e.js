@@ -461,7 +461,9 @@ class CDP {
       // 切到音乐栏并播放
       document.querySelector('.tabbtn[data-page="music"]').click();
       document.querySelector('#btnPlay').click();
-      await new Promise(r => setTimeout(r, 4500));
+      // 等音频真正出声（编曲渲染在 Worker 里，主线程忙时起始会晚一点）
+      for (let i = 0; i < 48 && !p.isPlaying; i++) await new Promise(r => setTimeout(r, 250));
+      await new Promise(r => setTimeout(r, 900));
       out.liveShown = !document.querySelector('#playerLive').hidden;
       out.genSec = (document.querySelector('#genSec')||{}).textContent || '';
       out.genRound = (document.querySelector('#genRound')||{}).textContent || '';
@@ -475,13 +477,15 @@ class CDP {
       out.mpBtns = ['#mpPlay','#mpLoop','#mpVol'].every(s => !!document.querySelector(s));
       // 播放中再点一次：是「暂停」（无独立停止键），音乐挂起而非结束
       document.querySelector('#btnPlay').click();
-      await new Promise(r => setTimeout(r, 500));
+      for (let i = 0; i < 20 && !p.paused; i++) await new Promise(r => setTimeout(r, 150));
+      await new Promise(r => setTimeout(r, 300));
       out.playTextAfter = (document.querySelector('#btnPlayText')||{}).textContent || '';
       out.pausedAfter = p.paused;
       out.liveText = (document.querySelector('#playerLiveText')||{}).textContent || '';
       // 点第三次：从原处继续
       document.querySelector('#btnPlay').click();
-      await new Promise(r => setTimeout(r, 500));
+      for (let i = 0; i < 20 && p.paused; i++) await new Promise(r => setTimeout(r, 150));
+      await new Promise(r => setTimeout(r, 300));
       out.playTextThird = (document.querySelector('#btnPlayText')||{}).textContent || '';
       out.resumed = !p.paused;
       // 停止由「切换卦象」完成
@@ -527,6 +531,128 @@ class CDP {
   (gv.mpHiddenAfterCast)
     ? ok('停止后浮动栏收起')
     : err('停止后浮动栏未收起');
+
+  /* ---------- 2h-2. 浮动播放栏几何：与标签栏同宽同轴、不重叠 ---------- */
+  console.log('\n【2h-2】浮动播放栏几何');
+  const mpGeo = await cdp.send('Runtime.evaluate', {
+    expression: `(async () => {
+      const out = {};
+      const tb = document.querySelector('#tabbar');
+      const mp = document.querySelector('#miniPlayer');
+      document.querySelector('.tabbtn[data-page="music"]').click();
+      if (mp.hidden) document.querySelector('#btnPlay').click();
+      await new Promise(r => setTimeout(r, 3800));
+      const t = tb.getBoundingClientRect();
+      const m = mp.getBoundingClientRect();
+      out.visible = !mp.hidden;
+      out.mpW = Math.round(m.width);
+      out.tbW = Math.round(t.width);
+      out.sameWidth = Math.abs(t.width - m.width) <= 1.5;
+      out.mpH = Math.round(m.height);
+      out.tbH = Math.round(t.height);
+      out.gap = Math.round(t.top - m.bottom);          // 两栏间距
+      out.overlap = m.bottom > t.top + 0.5;           // 是否压住标签栏
+      out.axis = Math.abs((m.left + m.right) / 2 - (t.left + t.right) / 2) <= 1.5;
+      out.mpVar = getComputedStyle(document.documentElement).getPropertyValue('--mp-bottom').trim();
+      // 停止播放
+      window.__gxCastHexagram(11);
+      await new Promise(r => setTimeout(r, 400));
+      return out;
+    })()`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+  const mg = mpGeo.result.value;
+  (mg.visible && mg.sameWidth && mg.axis && !mg.overlap && mg.gap >= 6)
+    ? ok(`浮动栏与标签栏同宽同轴（${mg.mpW}px / 高 ${mg.mpH}px），间距 ${mg.gap}px 不重叠`)
+    : err(`浮动栏几何异常（visible=${mg.visible} sameW=${mg.sameWidth} axis=${mg.axis} overlap=${mg.overlap} gap=${mg.gap}）`);
+
+  /* ---------- 2h-3. 液态玻璃按压动效 ---------- */
+  console.log('\n【2h-3】液态按压动效');
+  const liq = await cdp.send('Runtime.evaluate', {
+    expression: `(() => {
+      const out = {};
+      document.querySelector('.tabbtn[data-page="music"]').click();
+      const btn = document.querySelector('#btnPlay');
+      const r = btn.getBoundingClientRect();
+      out.w = Math.round(r.width);
+      const x = r.left + r.width * 0.3, y = r.top + r.height * 0.6;
+      const mk = (type) => new PointerEvent(type, {
+        bubbles: true, cancelable: true, clientX: x, clientY: y,
+        pointerId: 1, pointerType: 'touch', isPrimary: true
+      });
+      btn.dispatchEvent(mk('pointerdown'));
+      out.press = btn.classList.contains('is-press');
+      out.px = btn.style.getPropertyValue('--px');
+      out.py = btn.style.getPropertyValue('--py');
+      out.ripple = btn.querySelectorAll('.lq-ripple').length;
+      btn.dispatchEvent(mk('pointerup'));
+      out.released = !btn.classList.contains('is-press');
+      // 开关态切换应有「涌起」动效类
+      const loop = document.querySelector('#mpLoop');
+      out.hasPulseRule = !!(loop && typeof loop.classList !== 'undefined');
+      // 样式表里确实有液态动效规则
+      let rules = 0;
+      for (const sheet of document.styleSheets) {
+        let list = null;
+        try { list = sheet.cssRules; } catch (e) { list = null; }
+        if (!list) continue;
+        for (const r2 of list) {
+          if (r2.cssText && (r2.cssText.indexOf('lq-ripple') >= 0 || r2.cssText.indexOf('is-press') >= 0)) rules++;
+        }
+      }
+      out.rules = rules;
+      // 迷你栏按键同样有触点高光
+      const mpBtn = document.querySelector('#mpVol');
+      const mr = mpBtn.getBoundingClientRect();
+      mpBtn.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true, clientX: mr.left + 4, clientY: mr.top + 4,
+        pointerId: 2, pointerType: 'touch', isPrimary: true
+      }));
+      out.mpPress = mpBtn.classList.contains('is-press');
+      mpBtn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 2 }));
+      return out;
+    })()`,
+    returnByValue: true
+  });
+  const lq = liq.result.value;
+  (lq.press && lq.released && lq.px && lq.py && lq.ripple > 0 && lq.rules >= 2)
+    ? ok(`液态按压：触点高光（${lq.px}/${lq.py}）+ 涟漪环（${lq.ripple} 个）+ 样式规则 ${lq.rules} 条`)
+    : err(`液态按压动效缺失（press=${lq.press} px=${lq.px} ripple=${lq.ripple} rules=${lq.rules}）`);
+  lq.mpPress ? ok('浮动栏按键同样有触点高光') : err('浮动栏按键无触点高光');
+
+  /* ---------- 2h-4. 丝缕烟雾系统（方案 B：湍流丝缕） ---------- */
+  console.log('\n【2h-4】丝缕烟雾');
+  const fil = await cdp.send('Runtime.evaluate', {
+    expression: `(async () => {
+      const out = {};
+      document.querySelector('.tabbtn[data-page="music"]').click();
+      if (document.querySelector('#miniPlayer').hidden) document.querySelector('#btnPlay').click();
+      await new Promise(r => setTimeout(r, 4200));
+      const f = window.__gxFil ? window.__gxFil() : null;
+      out.has = !!f;
+      out.n = f ? f.n : 0;
+      out.intro = f ? f.intro : 0;
+      // 丝缕应分布在画面两侧（自气口涌入），且都有拖尾
+      out.spread = (() => {
+        const w = document.querySelector('#viz').clientWidth;
+        const xs = window.__gxFilXs ? window.__gxFilXs() : [];
+        if (!xs.length) return { left: 0, right: 0 };
+        return { left: xs.filter(x => x < w * 0.35).length, right: xs.filter(x => x > w * 0.65).length };
+      })();
+      out.trail = f && f.sample ? f.sample.trail : 0;
+      return out;
+    })()`,
+    awaitPromise: true,
+    returnByValue: true
+  });
+  const fl = fil.result.value;
+  (fl.has && fl.n > 80 && fl.intro >= 0.99 && fl.trail >= 4)
+    ? ok(`丝缕系统运行中：${fl.n} 条丝，拖尾 ${fl.trail} 点，渐入 ${fl.intro.toFixed(2)}`)
+    : err(`丝缕系统异常（has=${fl.has} n=${fl.n} intro=${fl.intro} trail=${fl.trail}）`);
+  (fl.spread.left > 0 && fl.spread.right > 0)
+    ? ok(`雾自左右两侧气口涌入（左 ${fl.spread.left} / 右 ${fl.spread.right}）`)
+    : err(`雾的来源分布异常（${JSON.stringify(fl.spread)}）`);
 
   /* ---------- 2i. 音层面板：疗愈九频 + 自然五层 ---------- */
   console.log('\n【2i】音层面板');
@@ -597,13 +723,17 @@ class CDP {
       const playBtn = document.querySelector('#btnPlay');
       out.exists = !!playBtn;
       out.noStopBtn = !document.querySelector('#btnPause');   // 独立的停止/暂停键已合并
-      // 先起播（上一节结束时已停）
+      // 先切一卦把状态复位（切卦即停），确保从干净状态起播
+      window.__gxCastHexagram(11);
+      await sleep(800);
       playBtn.click();
-      await sleep(3000);
+      for (let i = 0; i < 48 && !p.isPlaying; i++) await sleep(250);
+      await sleep(700);
       out.playing = p.isPlaying;
       // 暂停（同一个大按钮）
       playBtn.click();
-      await sleep(500);
+      for (let i = 0; i < 20 && !p.paused; i++) await sleep(150);
+      await sleep(300);
       out.paused = p.paused;
       out.pauseText = document.querySelector('#btnPlayText').textContent;
       out.liveText = (document.querySelector('#playerLiveText')||{}).textContent || '';
@@ -613,7 +743,8 @@ class CDP {
       out.pcmSame = !!(p._gen && p._gen.rounds[0] && p._gen.rounds[0].pcm === pcmBefore);
       // 继续
       playBtn.click();
-      await sleep(500);
+      for (let i = 0; i < 20 && p.paused; i++) await sleep(150);
+      await sleep(300);
       out.resumed = !p.paused;
       out.pauseText2 = document.querySelector('#btnPlayText').textContent;
       out.pcmSame2 = !!(p._gen && p._gen.rounds[0] && p._gen.rounds[0].pcm === pcmBefore);
@@ -655,17 +786,23 @@ class CDP {
         const cv = document.querySelector('#viz');
         const cx2 = cv.getContext('2d');
         const dpr = cv.width / cv.clientWidth;
-        const scale = Math.min(cv.clientWidth / 340, (cv.clientHeight * 0.60) / 151);
-        const gap = 25 * scale;
-        const cyv = cv.clientHeight * 0.42;
-        const lum = (x, y) => {
+        // 几何直接取自 app（不写死常量，免得改一次模型就失配）
+        const geo = window.__gxVizGeo || {};
+        const scale = geo.scale;
+        const gap = geo.gap * scale;
+        const cyv = geo.cy;
+        // 判别用「冷暖」而非亮度：金属板是暖色（R>B），背景与空缺处是冷色（B>R）。
+        // 上爻为阴 → 画面中心是空的（露出冷背景）；初爻为阳 → 中心是金属（暖）。
+        const px = (x, y) => {
           const d = cx2.getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data;
-          return (d[0] + d[1] + d[2]) / 3;
+          return { lum: (d[0] + d[1] + d[2]) / 3, warm: d[0] - d[2] };
         };
+        const top = px(cv.clientWidth / 2, cyv - 2.5 * gap);
+        const bot = px(cv.clientWidth / 2, cyv + 2.5 * gap);
         return {
           fig, viz, name,
-          topLum: Math.round(lum(cv.clientWidth / 2, cyv - 2.5 * gap)),
-          botLum: Math.round(lum(cv.clientWidth / 2, cyv + 2.5 * gap))
+          topLum: Math.round(top.lum), botLum: Math.round(bot.lum),
+          topWarm: Math.round(top.warm), botWarm: Math.round(bot.warm)
         };
       })();
     })()`,
@@ -676,9 +813,9 @@ class CDP {
   (dv.name === '地天泰' && dv.fig === '000111' && dv.viz === dv.fig)
     ? ok(`波形台卦象数据与起卦栏一致（${dv.name}：自上而下 ${dv.viz}）`)
     : err(`卦象数据不一致（${dv.name}：起卦栏 ${dv.fig}，波形台 ${dv.viz}）`);
-  (dv.topLum < dv.botLum)
-    ? ok(`波形台卦象方向正确（上爻阴、下爻阳：中心亮度 ${dv.topLum} < ${dv.botLum}）`)
-    : err(`波形台卦象上下颠倒（上爻亮度 ${dv.topLum} ≥ 下爻 ${dv.botLum}）`);
+  (dv.topWarm < dv.botWarm)
+    ? ok(`波形台卦象方向正确（上爻阴：中心是空缺 ${dv.topWarm}；初爻阳：中心是金属 ${dv.botWarm}）`)
+    : err(`波形台卦象上下颠倒（上爻冷暖 ${dv.topWarm} ≥ 下爻 ${dv.botWarm}）`);
 
   /* ---------- 2i-0b. 波形台配套：循环 / 波形预览条 / 画质档 ---------- */
   console.log('\n【2i-0b】波形台配套');
@@ -736,14 +873,18 @@ class CDP {
       const out = {};
       const mp = document.querySelector('#miniPlayer');
       const p = window.__gxPlayer;
-      // 起播（浮动栏应已在 2e-3 后收起）
+      // 先复位（切卦即停），再起播，确保状态确定
+      window.__gxCastHexagram(11);
+      await sleep(800);
       document.querySelector('#btnPlay').click();
-      await sleep(2600);
+      for (let i = 0; i < 48 && !p.isPlaying; i++) await sleep(250);
+      await sleep(700);
       out.shown = !mp.hidden;
       out.playIconIsPause = getComputedStyle(document.querySelector('.mp-ico-pause')).display !== 'none';
       // 浮动栏的播放键 → 暂停
       document.querySelector('#mpPlay').click();
-      await sleep(500);
+      for (let i = 0; i < 20 && !p.paused; i++) await sleep(150);
+      await sleep(250);
       out.pausedByMp = p.paused;
       out.playIconIsPlay = getComputedStyle(document.querySelector('.mp-ico-play')).display !== 'none';
       out.subPaused = (document.querySelector('#mpSub')||{}).textContent || '';
@@ -765,7 +906,8 @@ class CDP {
       out.restored = Number(document.querySelector('#volume').value) > 0;
       // 继续播放后切卦象收栏
       document.querySelector('#mpPlay').click();
-      await sleep(400);
+      for (let i = 0; i < 20 && p.paused; i++) await sleep(150);
+      await sleep(300);
       window.__gxCastHexagram(11);
       await sleep(400);
       out.hiddenAfterCast = mp.hidden;
@@ -863,10 +1005,13 @@ class CDP {
       // 切回纸本
       document.querySelector('#skinList .skin-opt[data-key="paper"]').click();
       out.backSkin = document.documentElement.getAttribute('data-skin');
-      // 作者栏：本 App 作者的联系方式
+      // 联系方式：本 App 的联系邮箱（不出现作者名）
       out.author = (document.querySelector('#settingsSheet .set-value')||{}).textContent || '';
       out.mail = (document.querySelector('#authorEmail')||{}).textContent || '';
       out.copyBtn = !!document.querySelector('#btnCopyEmail');
+      out.mentionsName = (document.querySelector('#settingsSheet').textContent || '').indexOf('芦荟汁') >= 0;
+      out.groupContact = Array.from(document.querySelectorAll('#settingsSheet .set-title'))
+        .some(h => h.textContent === '联系方式');
       return out;
     })()`,
     returnByValue: true
@@ -875,12 +1020,12 @@ class CDP {
   (skv.gear && skv.sheetHiddenBefore && skv.sheetOpen && skv.sheetHiddenAfter)
     ? ok('顶栏齿轮打开设置页，可开可关')
     : err(`设置页开合异常（gear=${skv.gear} open=${skv.sheetOpen}）`);
-  (skv.author === '芦荟汁' && skv.mail === '809006156@qq.com' && skv.copyBtn)
-    ? ok(`作者栏：${skv.author} · ${skv.mail}（可一键复制）`)
-    : err(`作者栏内容异常（author=${skv.author} mail=${skv.mail} copy=${skv.copyBtn}）`);
+  (skv.mail === '809006156@qq.com' && skv.copyBtn && !skv.mentionsName && skv.groupContact)
+    ? ok(`联系方式栏：${skv.mail}（可一键复制），不露作者名`)
+    : err(`联系方式栏异常（mail=${skv.mail} copy=${skv.copyBtn} 露名=${skv.mentionsName} 分组=${skv.groupContact}）`);
   (skv.groups.indexOf('外观') >= 0 && skv.groups.indexOf('文字') >= 0
     && skv.groups.indexOf('播放') >= 0 && skv.groups.indexOf('数据') >= 0
-    && skv.groups.indexOf('作者') >= 0)
+    && skv.groups.indexOf('联系方式') >= 0)
     ? ok(`设置页分组：${skv.groups}`)
     : err(`设置页分组缺失：${skv.groups}`);
   (skv.count === 3 && skv.hasSwatch) ? ok(`外观可选三种：${skv.names}`) : err(`外观选项异常（count=${skv.count}）`);

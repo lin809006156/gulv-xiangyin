@@ -168,7 +168,9 @@
     bindSkin();
     bindVisibility();
     bindVizModes();
+    bindLiquidPress();
     restorePref();
+    bindMiniPlayerLayout();
     castDaily();
   }
 
@@ -1359,6 +1361,110 @@
     }
   }
 
+  /* ---------------------------------------------------------------
+   * 浮动栏贴位：实测标签栏位置，写入 --mp-bottom
+   * ---------------------------------------------------------------
+   * 标签栏是 fixed 胶囊，高度随字号档 / 安全区 / 横竖屏变化，
+   * 写死的 --tabbar-h 会在大字号时与实际位置对不上（曾导致两栏重叠）。
+   * 故此处量真实矩形，浮动栏永远停在标签栏上方 10px。
+   */
+  function layoutMiniPlayer() {
+    const tb = $('#tabbar');
+    if (!tb) return;
+    const r = tb.getBoundingClientRect();
+    if (!r.height) return;
+    const gap = 10;
+    const bottom = Math.round(window.innerHeight - r.top) + gap;
+    document.documentElement.style.setProperty('--mp-bottom', bottom + 'px');
+  }
+
+  function bindMiniPlayerLayout() {
+    layoutMiniPlayer();
+    window.addEventListener('resize', layoutMiniPlayer);
+    window.addEventListener('orientationchange', () => setTimeout(layoutMiniPlayer, 120));
+    // 字号档切换会改变标签栏高度，稍后再量一次
+    const fontRow = $('#fontRow');
+    if (fontRow) {
+      fontRow.addEventListener('click', () => setTimeout(layoutMiniPlayer, 60));
+    }
+  }
+
+  /* ===============================================================
+   * 液态玻璃 · 按压动效
+   * ---------------------------------------------------------------
+   * 玻璃被按下去时不该「塌陷」，而该被压出一个凹面：
+   *   1. 触点高光 —— 记住触点，伪元素从该点散开（CSS .is-press）
+   *   2. 涟漪环   —— 主操作键点按荡开一圈水纹
+   *   3. 涌起     —— 开关切换时的一下回弹
+   * 只动 transform / opacity，不触发布局。
+   * =============================================================== */
+
+  /** 会参与液态按压的玻璃按键（与 CSS 的选择器列表对应） */
+  const LIQUID_SEL = '.btn, .tabbtn, .seg, .viz-mode, .mp-btn, .skin-opt,'
+    + ' .segmented .tab, .amb-chip, .inst-play, .icon-btn, .vol-btn, .vision-clear';
+  /** 会荡开涟漪的主操作键 */
+  const RIPPLE_SEL = '.btn-play, .mp-btn';
+
+  function bindLiquidPress() {
+    // 触点位置 → 按压高光的中心
+    document.addEventListener('pointerdown', (e) => {
+      const t = e.target && e.target.closest ? e.target.closest(LIQUID_SEL) : null;
+      if (!t) return;
+      const r = t.getBoundingClientRect();
+      // 元素不可见时（矩形为 0）用默认中心点，仍保留按压高光
+      if (r.width && r.height) {
+        t.style.setProperty('--px', (((e.clientX - r.left) / r.width) * 100).toFixed(1) + '%');
+        t.style.setProperty('--py', (((e.clientY - r.top) / r.height) * 100).toFixed(1) + '%');
+      }
+      t.classList.add('is-press');
+    }, { passive: true });
+
+    // 松手：高光缓缓退去（CSS 负责淡出）
+    const release = (e) => {
+      const t = e.target && e.target.closest ? e.target.closest(LIQUID_SEL) : null;
+      if (t) t.classList.remove('is-press');
+    };
+    document.addEventListener('pointerup', release, { passive: true });
+    document.addEventListener('pointercancel', release, { passive: true });
+    document.addEventListener('pointerleave', release, { passive: true });
+
+    // 主操作键：点按处荡开一圈水纹
+    document.addEventListener('pointerdown', (e) => {
+      const t = e.target && e.target.closest ? e.target.closest(RIPPLE_SEL) : null;
+      if (!t) return;
+      spawnRipple(t, e.clientX, e.clientY);
+    }, { passive: true });
+
+    // 开关态变化：一下「涌起」
+    document.addEventListener('click', (e) => {
+      const t = e.target && e.target.closest ? e.target.closest('[aria-pressed]') : null;
+      if (!t) return;
+      t.classList.remove('is-pulse');
+      // 强制重排以便重放同一动画
+      void t.offsetWidth;
+      t.classList.add('is-pulse');
+      setTimeout(() => t.classList.remove('is-pulse'), 520);
+    });
+  }
+
+  /** 生成一圈扩散的涟漪 */
+  function spawnRipple(host, clientX, clientY) {
+    if (!host) return;
+    const r = host.getBoundingClientRect();
+    if (!r.width || !r.height) return;   // 不可见时不生成
+    const size = Math.max(r.width, r.height) * 2.2;
+    const x = (typeof clientX === 'number' ? clientX : r.left + r.width / 2) - r.left;
+    const y = (typeof clientY === 'number' ? clientY : r.top + r.height / 2) - r.top;
+    const span = document.createElement('span');
+    span.className = 'lq-ripple';
+    span.style.width = size + 'px';
+    span.style.height = size + 'px';
+    span.style.left = x + 'px';
+    span.style.top = y + 'px';
+    host.appendChild(span);
+    setTimeout(() => { if (span.parentNode) span.parentNode.removeChild(span); }, 700);
+  }
+
   /** 播放卡片上的快捷开关：疗愈频率（其余音层在「音层」面板） */
   function toggleSolfeggio() {
     ambient.sol.on = !ambient.sol.on;
@@ -1881,80 +1987,40 @@
      取值原则（据参考图）：机位基本正对卦体 —— 方位角取极小值，
      使爻条在画面上保持水平、卦体左右对称，透视消失点正落在模型
      正后方的中轴上；立体感主要来自顶面与端面的明暗，而非强烈的斜切。 */
-  const VIZ_YAW = 0.07;      // 方位角：近乎正对（仅留一丝右偏，使端面可见）
-  const VIZ_PITCH = 0.32;    // 仰角：略俯视，故顶面可见
-  const VIZ_PERSP = 0.0016;  // 透视强度
+  const VIZ_YAW = 0.17;      // 方位角：略偏右 → 露出一线右端面（参考图的比例）
+  const VIZ_PITCH = 0.26;    // 仰角：轻俯 → 露出一线顶面，不多不少
+  const VIZ_PERSP = 0.0032;  // （房间透视强度用；卦体本身走正交，纹丝不歪）
 
-  /** 建立投影器：模型坐标 → 屏幕坐标（+深度，用于排序） */
-  function makeProjector(cx, cy, scale) {
-    const cp = Math.cos(VIZ_PITCH), sp = Math.sin(VIZ_PITCH);
-    const cyw = Math.cos(VIZ_YAW), syw = Math.sin(VIZ_YAW);
-    // 相机方向（由原点指向相机）
-    const bx = syw * cp, by = sp, bz = cyw * cp;
-    // 视线 = -b
-    const f = [-bx, -by, -bz];
-    // 右基 = normalize(cross(f, worldUp))
-    let rx = f[1] * 0 - f[2] * 1, ry = 0, rz = f[0] * 1 - f[1] * 0;
-    const rl = Math.hypot(rx, ry, rz) || 1;
-    rx /= rl; ry /= rl; rz /= rl;
-    // 上基 = cross(r, f)
-    const ux = ry * f[2] - rz * f[1];
-    const uy = rz * f[0] - rx * f[2];
-    const uz = rx * f[1] - ry * f[0];
-    return function (x, y, z) {
-      const xv = x * rx + y * ry + z * rz;
-      const yv = x * ux + y * uy + z * uz;
-      const zv = x * bx + y * by + z * bz;    // 越大越远
-      const p = 1 / (1 + zv * VIZ_PERSP);
-      return [cx + xv * scale * p, cy - yv * scale * p, zv];
-    };
-  }
-
-  /** 圆角矩形的二维轮廓点（半长 a、半宽 b、圆角 r） */
-  function roundedOutline(a, b, r, seg) {
-    const k = seg || 4;
-    const rr = Math.min(r, Math.min(a, b) * 0.98);
-    const pts = [];
-    const corners = [
-      [a - rr, b - rr, 0],
-      [-a + rr, b - rr, Math.PI / 2],
-      [-a + rr, -b + rr, Math.PI],
-      [a - rr, -b + rr, Math.PI * 1.5]
-    ];
-    corners.forEach(([ox, oy, a0]) => {
-      for (let i = 0; i <= k; i++) {
-        const t = a0 + (i / k) * (Math.PI / 2);
-        pts.push([ox + Math.cos(t) * rr, oy + Math.sin(t) * rr]);
-      }
-    });
-    return pts;
-  }
-
-  /** 把三维轮廓点列投影成屏幕路径（不加填充） */
-  function tracePath(ctx, outline, plane, off, P) {
-    ctx.beginPath();
-    for (let i = 0; i < outline.length; i++) {
-      const u = outline[i][0], v = outline[i][1];
-      const p = plane === 'xz' ? P(u, off, v)
-        : plane === 'zy' ? P(off, v, u)
-          : P(u, v, off);
-      if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
-    }
-    ctx.closePath();
-  }
-
-  /* ---------- 一根爻的立体绘制 ---------- */
+  /* ---------- 一根爻的立体绘制（正交：绝不歪） ---------- */
   /**
-   * 画一根圆角爻条。三个可见面各自按光照着色，正面叠高光，
-   * 立体感来自真实的三面投影而非明暗贴图。
-   * geo 可带 barRGB / movRGB / edgeRGB 覆盖配色（深色空间用钢青）。
+   * 画一块金属爻板。**正交画法**：
+   *   · 正面 = 水平矩形（绝对平直，绝不因透视被拉成梯形）
+   *   · 顶面 = 沿景深方向偏移的平行四边形（偏移 = 深度 × sin(仰角/方位角)）
+   *   · 右端面 = 同理，一片薄薄的侧棱
+   * 立体感完全来自「三个面 + 光照」，不靠投影除法 ——
+   * 此前用伪透视投影器，长爻沿长度方向被缩放，整座卦象看着是歪的。
+   *
+   * @param bar  {x0, x1, y}  段的世界 x 范围与世界 y（向上为正）
+   * @param mirror 1 = 镜面地面上的倒影（沿 floorY 翻折）
    */
-  function drawYao3D(ctx, P, geo, energy, isMov, fade) {
-    const { hx, hy, hz, cy, r, cx0 } = geo;
-    const outX = roundedOutline(hx, hz, r, 4);   // 顶面轮廓（XZ）
-    const outZ = roundedOutline(hx, hy, r, 4);   // 正面轮廓（XY）
-    const outY = roundedOutline(hz, hy, r, 3);   // 右端面轮廓（ZY）
-    const ox = cx0 || 0;                          // 本段在卦体中的横向中心
+  function drawYao3D(ctx, geo, bar, energy, isMov, fade, mirror) {
+    const s = geo.scale;
+    const hx = (bar.x1 - bar.x0) / 2;
+    const cx0 = (bar.x0 + bar.x1) / 2;          // 本段在卦体中的横向中心（世界 x）
+    const hy = geo.hy, hz = geo.hz;
+    const halfW = hx * s, halfH = hy * s;
+
+    // 屏幕坐标：正面矩形
+    let x0 = geo.cx + bar.x0 * s;
+    let x1 = geo.cx + bar.x1 * s;
+    let cy = geo.cy - bar.y * s;                // 世界 y 向上 → 屏幕 y 向下
+    // 景深方向在屏幕上的偏移（背面相对正面）：上 + 左
+    let ddx = -hz * Math.sin(VIZ_YAW) * s;
+    let ddy = -hz * Math.sin(VIZ_PITCH) * s;
+    if (mirror) { cy = 2 * geo.floorY - cy; ddy = -ddy; }
+
+    const yTop = cy - halfH, yBot = cy + halfH;
+    const bw = x1 - x0, bh = yBot - yTop;
 
     const base = isMov ? (geo.movRGB || [178, 58, 46]) : (geo.barRGB || [46, 74, 92]);
     const edge = geo.edgeRGB || (isMov ? [126, 38, 30] : [28, 48, 62]);
@@ -1962,87 +2028,121 @@
     const lit = (k) => `rgba(${Math.round(Math.min(255, base[0] * k))},` +
       `${Math.round(Math.min(255, base[1] * k))},${Math.round(Math.min(255, base[2] * k))},${fade})`;
 
-    /* 投影后的包围盒，供高光与阴影定位 */
-    const bl = P(ox - hx, -hy, hz), br = P(ox + hx, -hy, hz);
-    const tl = P(ox - hx, hy, hz), tr = P(ox + hx, hy, hz);
-    const minX = Math.min(bl[0], br[0], tl[0], tr[0]);
-    const maxX = Math.max(bl[0], br[0], tl[0], tr[0]);
-    const minY = Math.min(bl[1], br[1], tl[1], tr[1]);
-    const maxY = Math.max(bl[1], br[1], tl[1], tr[1]);
-    const bw = maxX - minX, bh = Math.max(1, maxY - minY);
-
-    /* 落地阴影（低透明投影，先画） */
-    ctx.save();
-    ctx.globalAlpha = 0.20 * fade;
-    ctx.fillStyle = 'rgba(0,0,0,1)';
-    tracePath(ctx, outZ, 'xy', hz, (x, y, z) => P(x + ox + 3.5, cy + y + 5, z));
-    ctx.fill();
-    ctx.restore();
-
     /* 右端面（最暗，勾出厚度） */
-    ctx.fillStyle = lit(0.50 + glow * 0.14);
-    tracePath(ctx, outY, 'zy', ox + hx, (x, y, z) => P(x, cy + y, z));
+    ctx.fillStyle = lit(0.22 + glow * 0.08);
+    ctx.beginPath();
+    ctx.moveTo(x1, yTop);
+    ctx.lineTo(x1, yBot);
+    ctx.lineTo(x1 + ddx, yBot + ddy);
+    ctx.lineTo(x1 + ddx, yTop + ddy);
+    ctx.closePath();
     ctx.fill();
 
-    /* 顶面（最亮，受光面） */
-    const gTop = ctx.createLinearGradient(minX, minY - bh * 0.4, maxX, minY + bh * 0.5);
-    gTop.addColorStop(0, lit(1.34 + glow * 0.30));
-    gTop.addColorStop(0.55, lit(1.02 + glow * 0.20));
-    gTop.addColorStop(1, lit(0.80 + glow * 0.12));
+    /* 顶面（受光面，最亮） */
+    const gTop = ctx.createLinearGradient(x0, yTop, x1, yTop + ddy);
+    gTop.addColorStop(0, lit(1.45 + glow * 0.32));
+    gTop.addColorStop(0.55, lit(1.06 + glow * 0.20));
+    gTop.addColorStop(1, lit(0.72 + glow * 0.10));
     ctx.fillStyle = gTop;
-    tracePath(ctx, outX, 'xz', hy, (x, y, z) => P(x + ox, cy + y, z));
+    ctx.beginPath();
+    ctx.moveTo(x0, yTop);
+    ctx.lineTo(x1, yTop);
+    ctx.lineTo(x1 + ddx, yTop + ddy);
+    ctx.lineTo(x0 + ddx, yTop + ddy);
+    ctx.closePath();
     ctx.fill();
 
-    /* 正面（主体）：斜向渐变，模拟圆角的明暗过渡 */
-    const gFront = ctx.createLinearGradient(minX, minY, maxX, maxY);
-    gFront.addColorStop(0, lit(1.16 + glow * 0.26));
-    gFront.addColorStop(0.38, lit(0.92 + glow * 0.16));
-    gFront.addColorStop(1, lit(0.62 + glow * 0.10));
+    /* 正面（主体）：竖向渐变，模拟金属面由上到下的明暗过渡 */
+    const gFront = ctx.createLinearGradient(x0, yTop, x0 + bw * 0.30, yBot);
+    gFront.addColorStop(0, lit(0.58 + glow * 0.22));
+    gFront.addColorStop(0.22, lit(0.36 + glow * 0.13));
+    gFront.addColorStop(0.66, lit(0.17 + glow * 0.07));
+    gFront.addColorStop(1, lit(0.09 + glow * 0.04));
     ctx.fillStyle = gFront;
-    tracePath(ctx, outZ, 'xy', hz, (x, y, z) => P(x + ox, cy + y, z));
-    ctx.fill();
+    ctx.fillRect(x0, yTop, bw, bh);
 
     /* 金属高光：一条窄而亮的镜面反光带（金属的高光是收紧的，不是漫反射） */
     ctx.save();
-    tracePath(ctx, outZ, 'xy', hz, (x, y, z) => P(x + ox, cy + y, z));
+    ctx.beginPath();
+    ctx.rect(x0, yTop, bw, bh);
     ctx.clip();
-    const ms = ctx.createLinearGradient(minX, minY + bh * 0.10, minX + bw * 0.62, maxY);
+
+    /* 拉丝：金属表面的细密横向纹理（各向异性反射的来源） */
+    const seed = Math.round(cy * 13 + hx * 7 + cx0 * 3);
+    const STREAKS = 18;
+    for (let i = 0; i < STREAKS; i++) {
+      const yy = yTop + (bh * (i + 0.5)) / STREAKS + (vizHash(seed, i) - 0.5) * bh * 0.05;
+      const a = (0.025 + vizHash(seed, i + 40) * 0.085) * fade;
+      ctx.strokeStyle = vizHash(seed, i + 80) > 0.48
+        ? `rgba(255,248,232,${a})`
+        : `rgba(26,16,8,${a * 1.1})`;
+      ctx.lineWidth = 0.5 + vizHash(seed, i + 120) * 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x0 - 2, yy);
+      ctx.lineTo(x1 + 2, yy);
+      ctx.stroke();
+    }
+
+    /* 磨损：几道细划痕（金属用久了的样子） */
+    for (let i = 0; i < 4; i++) {
+      const sx = x0 + bw * (0.10 + vizHash(seed, 200 + i) * 0.80);
+      const sy = yTop + bh * (0.16 + vizHash(seed, 220 + i) * 0.68);
+      const len = bw * (0.04 + vizHash(seed, 240 + i) * 0.11);
+      ctx.strokeStyle = `rgba(255,250,236,${(0.08 + vizHash(seed, 260 + i) * 0.15) * fade})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + len, sy - len * 0.16);
+      ctx.stroke();
+    }
+
+    const ms = ctx.createLinearGradient(x0, yTop + bh * 0.10, x0 + bw * 0.62, yBot);
     ms.addColorStop(0, 'rgba(255,255,255,0)');
-    ms.addColorStop(0.40, `rgba(255,246,228,${(0.06 + energy * 0.12) * fade})`);
-    ms.addColorStop(0.52, `rgba(255,252,242,${(0.15 + energy * 0.18) * fade})`);
+    ms.addColorStop(0.40, `rgba(255,246,228,${(0.04 + energy * 0.08) * fade})`);
+    ms.addColorStop(0.52, `rgba(255,252,242,${(0.10 + energy * 0.13) * fade})`);
     ms.addColorStop(0.64, 'rgba(255,255,255,0)');
     ctx.fillStyle = ms;
-    ctx.fillRect(minX - 2, minY - 2, bw + 4, bh + 4);
+    ctx.fillRect(x0 - 2, yTop - 2, bw + 4, bh + 4);
     // 底部反光（环境光反弹），进一步柔化
-    const rf = ctx.createLinearGradient(0, maxY - bh * 0.42, 0, maxY);
+    const rf = ctx.createLinearGradient(0, yBot - bh * 0.42, 0, yBot);
     rf.addColorStop(0, 'rgba(255,250,240,0)');
     rf.addColorStop(1, `rgba(255,214,150,${0.14 * fade})`);
     ctx.fillStyle = rf;
-    ctx.fillRect(minX - 2, minY - 2, bw + 4, bh + 4);
+    ctx.fillRect(x0 - 2, yTop - 2, bw + 4, bh + 4);
     ctx.restore();
+
+    /* 倒角：上缘一条亮棱、下缘一条暗棱 —— 金属的边缘最抓光 */
+    ctx.strokeStyle = `rgba(255,246,224,${(0.09 + energy * 0.10) * fade})`;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(x0, yTop);
+    ctx.lineTo(x1, yTop);
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(10,6,3,${0.42 * fade})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(x0, yBot);
+    ctx.lineTo(x1, yBot);
+    ctx.stroke();
 
     /* 边缘暖金自发光：先一层柔光，再一条细亮线（微弱、不刺眼） */
     const gold = geo.goldRGB || [255, 202, 132];
     const goldCss = `${gold[0]},${gold[1]},${gold[2]}`;
     ctx.save();
     ctx.lineCap = 'round';
-    // 柔光层
-    ctx.strokeStyle = `rgba(${goldCss},${(0.05 + energy * 0.09) * fade})`;
+    ctx.strokeStyle = `rgba(${goldCss},${(0.035 + energy * 0.065) * fade})`;
     ctx.lineWidth = Math.max(2.2, bh * 0.38);
     ctx.beginPath();
-    const ge0 = P(ox - hx * 0.96, cy + hy * 0.80, hz * 0.98);
-    const ge1 = P(ox + hx * 0.96, cy + hy * 0.80, hz * 0.98);
-    ctx.moveTo(ge0[0], ge0[1]); ctx.lineTo(ge1[0], ge1[1]);
+    ctx.moveTo(x0, yBot - bh * 0.10);
+    ctx.lineTo(x1, yBot - bh * 0.10);
     ctx.stroke();
     ctx.restore();
-    // 细亮线
-    ctx.beginPath();
-    const e0 = P(ox - hx * 0.94, cy + hy * 0.86, hz * 0.98);
-    const e1 = P(ox + hx * 0.94, cy + hy * 0.86, hz * 0.98);
-    ctx.moveTo(e0[0], e0[1]); ctx.lineTo(e1[0], e1[1]);
-    ctx.strokeStyle = `rgba(${goldCss},${(0.30 + energy * 0.26) * fade})`;
-    ctx.lineWidth = Math.max(0.8, bh * 0.10);
+    ctx.strokeStyle = `rgba(${goldCss},${(0.15 + energy * 0.15) * fade})`;
+    ctx.lineWidth = Math.max(0.7, bh * 0.075);
     ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x0 + 1, yBot - bh * 0.10);
+    ctx.lineTo(x1 - 1, yBot - bh * 0.10);
     ctx.stroke();
 
     /* 描边：金属暗边，兼作边缘微光的收束 */
@@ -2050,9 +2150,9 @@
       ? `rgba(${Math.round(edge[0] * 1.4)},${Math.round(edge[1] * 1.4)},${Math.round(edge[2] * 1.4)},${0.55 * fade})`
       : `rgba(${edge[0]},${edge[1]},${edge[2]},${0.42 * fade})`;
     ctx.lineWidth = 0.9;
-    tracePath(ctx, outZ, 'xy', hz, (x, y, z) => P(x + ox, cy + y, z));
-    ctx.stroke();
+    ctx.strokeRect(x0, yTop, bw, bh);
   }
+
 
   /* ---------- 主绘制入口 ---------- */
   function drawViz() {
@@ -2076,7 +2176,7 @@
       else drawVizRipple(ctx, w, h);
       drawStreamlines(ctx, w, h, gf);
     } else {
-      drawVizHex3D(ctx, w, h, geo, gf);
+      drawVizHex3D(ctx, w, h, geo, gf, dt);
     }
 
     vizAdvance(dt);
@@ -2177,15 +2277,17 @@
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, w, h);
 
-    // 灭点：正落在卦体正后方的中轴上（与卦体同一 x、高度取卦体中心），
-    // 于是房间的纵深与卦体的正面对视轴一致，卦体不显歪斜。
+    // 灭点：落在中轴上，但高度取「卦象脚下略上方」——
+    //   ① 于是地平线在模型底部附近（俯视广角该有的样子）；
+    //   ② 灭点被卦体与底座挡住，看不见；
+    //   ③ 地面辐线在靠近灭点处淡出，不会聚成一个显眼的点。
     const vpx = geo.cx;
-    const vpy = geo.cy;
+    const vpy = Math.max(geo.cy - h * 0.04, geo.floorY - (h - geo.floorY) * 0.58);
 
     /* 尽头光池：模型背后的柔光（风洞尽头的灯） */
-    const pool = ctx.createRadialGradient(vpx, vpy, 4, vpx, vpy, Math.max(w, h) * 0.52);
-    pool.addColorStop(0, `rgba(108,152,190,${0.10 + energy * 0.08})`);
-    pool.addColorStop(0.42, 'rgba(76,112,142,0.04)');
+    const pool = ctx.createRadialGradient(vpx, vpy, 4, vpx, vpy, Math.max(w, h) * 0.72);
+    pool.addColorStop(0, `rgba(96,140,180,${0.055 + energy * 0.05})`);
+    pool.addColorStop(0.28, `rgba(86,124,158,${0.030 + energy * 0.03})`);
     pool.addColorStop(1, 'rgba(76,112,142,0)');
     ctx.fillStyle = pool;
     ctx.fillRect(0, 0, w, h);
@@ -2205,17 +2307,26 @@
     ctx.lineWidth = 1;
     for (let i = -7; i <= 7; i++) {
       if (i === 0) continue;
-      ctx.strokeStyle = `rgba(122,158,188,${0.075 + energy * 0.045})`;
+      const ex = vpx + i * (w * 0.19);
+      // 辐线自灭点淡出：只留下向观者散开的纵深，灭点本身看不见
+      const ga = 0.030 + energy * 0.024;
+      const lg = ctx.createLinearGradient(vpx, vpy, ex, h);
+      lg.addColorStop(0, 'rgba(122,158,188,0)');
+      lg.addColorStop(0.26, `rgba(122,158,188,${ga * 0.30})`);
+      lg.addColorStop(1, `rgba(122,158,188,${ga})`);
+      ctx.strokeStyle = lg;
       ctx.beginPath();
       ctx.moveTo(vpx, vpy);
-      ctx.lineTo(vpx + i * (w * 0.17), h + 6);
+      ctx.lineTo(ex, h + 6);
       ctx.stroke();
     }
     const RUNGS = 7;
     for (let i = 1; i <= RUNGS; i++) {
       const f = Math.pow(i / RUNGS, 2.1);
       const y = vpy + (h - vpy) * f;
-      ctx.strokeStyle = `rgba(122,158,188,${0.07 + 0.13 * f + energy * 0.045})`;
+      // 越近地平线越淡（广角近景：远处的地面细节被压平）
+      const ga = (0.022 + 0.090 * f + energy * 0.030) * Math.min(1, f * 2.6);
+      ctx.strokeStyle = `rgba(122,158,188,${ga})`;
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(w, y);
@@ -2298,67 +2409,90 @@
    * 地上还留着孔光洒下的亮斑 —— 雾气即由此处喷出。
    */
   function drawVents(ctx, w, h, geo, lit) {
-    const ventH = Math.min(h * 0.50, 118);
-    const ventY = geo.cy - ventH / 2;
-    const ventW = Math.max(6, w * 0.017);
-    const r = 3.2;
-    // dir = 1 表示左孔（光向右射），-1 表示右孔
-    [{ x: 0, dir: 1 }, { x: w - ventW, dir: -1 }].forEach((v) => {
+    const ports = vizPorts(w, h, geo);
+    ports.l.dir = 1; ports.r.dir = -1;
+    [ports.l, ports.r].forEach((v) => {
+      const cx = v.x, cy = v.y;
+
       /* 孔外辉光 */
-      const glow = ctx.createRadialGradient(
-        v.x + (v.dir > 0 ? ventW * 0.5 : ventW * 0.5), geo.cy, 2,
-        v.x + ventW * 0.5, geo.cy, ventH * 0.95
-      );
-      glow.addColorStop(0, `rgba(176,214,244,${0.16 * lit})`);
-      glow.addColorStop(0.4, `rgba(140,182,220,${0.06 * lit})`);
+      const glow = ctx.createRadialGradient(cx, cy, 2, cx, cy, v.ry * 1.5);
+      glow.addColorStop(0, `rgba(176,214,244,${0.20 * lit})`);
+      glow.addColorStop(0.35, `rgba(140,182,220,${0.075 * lit})`);
       glow.addColorStop(1, 'rgba(120,164,204,0)');
       ctx.fillStyle = glow;
-      ctx.fillRect(v.x - ventH, geo.cy - ventH, ventH * 2 + ventW, ventH * 2);
+      ctx.fillRect(cx - v.ry * 1.6, cy - v.ry * 1.6, v.ry * 3.2, v.ry * 3.2);
 
-      /* 向内的光锥（体积光） */
-      const coneLen = w * 0.46;
-      const cone = ctx.createLinearGradient(v.x, 0, v.x + v.dir * coneLen, 0);
-      cone.addColorStop(0, `rgba(186,220,248,${0.075 * lit})`);
-      cone.addColorStop(0.35, `rgba(150,192,228,${0.028 * lit})`);
+      /* 向内的光锥（体积光）：从孔口斜射向画面深处 */
+      const coneLen = w * 0.52;
+      const cone = ctx.createLinearGradient(cx, 0, cx + v.dir * coneLen, 0);
+      cone.addColorStop(0, `rgba(196,226,250,${0.085 * lit})`);
+      cone.addColorStop(0.3, `rgba(150,192,228,${0.030 * lit})`);
       cone.addColorStop(1, 'rgba(140,182,220,0)');
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(v.x + (v.dir > 0 ? ventW : 0), ventY);
-      ctx.lineTo(v.x + (v.dir > 0 ? ventW : 0), ventY + ventH);
-      ctx.lineTo(v.x + v.dir * coneLen, geo.cy + ventH * 0.86);
-      ctx.lineTo(v.x + v.dir * coneLen, geo.cy - ventH * 0.86);
+      ctx.moveTo(cx, cy - v.ry * 0.92);
+      ctx.lineTo(cx, cy + v.ry * 0.92);
+      ctx.lineTo(cx + v.dir * coneLen, cy + v.ry * 1.35);
+      ctx.lineTo(cx + v.dir * coneLen, cy - v.ry * 1.35);
       ctx.closePath();
       ctx.fillStyle = cone;
       ctx.fill();
       ctx.restore();
 
-      /* 孔口本体：上亮下暗的窄缝 */
-      const hole = ctx.createLinearGradient(0, ventY, 0, ventY + ventH);
-      hole.addColorStop(0, `rgba(226,240,255,${0.72 * lit})`);
-      hole.addColorStop(0.42, `rgba(186,218,246,${0.54 * lit})`);
-      hole.addColorStop(1, `rgba(110,158,204,${0.22 * lit})`);
-      ctx.fillStyle = hole;
+      /* 金属环：拉丝钢的环体（外圈暗、内缘亮） */
+      const ringW = Math.max(3, v.rx * 0.30);
+      const ring = ctx.createLinearGradient(cx - ringW, cy - v.ry, cx + ringW, cy + v.ry);
+      ring.addColorStop(0, 'rgba(96,112,130,.92)');
+      ring.addColorStop(0.35, 'rgba(48,58,72,.95)');
+      ring.addColorStop(0.7, 'rgba(78,92,108,.9)');
+      ring.addColorStop(1, 'rgba(26,32,42,.95)');
+      ctx.save();
+      ctx.lineWidth = ringW;
+      ctx.strokeStyle = ring;
       ctx.beginPath();
-      ctx.roundRect(v.x, ventY, ventW, ventH, r);
-      ctx.fill();
-      /* 孔壁：上缘一条亮线 */
-      ctx.strokeStyle = `rgba(240,250,255,${0.5 * lit})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(v.x + 0.5, ventY + 0.5, ventW - 1, ventH - 1, r);
+      ctx.ellipse(cx, cy, v.rx + ringW / 2, v.ry + ringW / 2, 0, 0, Math.PI * 2);
       ctx.stroke();
+      /* 环上的高光弧（上缘一条亮线，像被顶灯打亮） */
+      ctx.lineWidth = Math.max(0.8, ringW * 0.28);
+      ctx.strokeStyle = `rgba(226,240,255,${0.55 * lit})`;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, v.rx + ringW / 2, v.ry + ringW / 2, 0, Math.PI * 1.05, Math.PI * 1.85);
+      ctx.stroke();
+      ctx.restore();
+
+      /* 孔内：强光核心 + 一点虹膜环 */
+      const inner = ctx.createRadialGradient(cx, cy, 1, cx, cy, v.rx * 1.25);
+      inner.addColorStop(0, `rgba(255,255,255,${0.98 * lit})`);
+      inner.addColorStop(0.22, `rgba(222,240,255,${0.80 * lit})`);
+      inner.addColorStop(0.62, `rgba(150,196,236,${0.34 * lit})`);
+      inner.addColorStop(1, 'rgba(96,140,190,0)');
+      ctx.fillStyle = inner;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, v.rx * 1.22, v.ry * 0.98, 0, 0, Math.PI * 2);
+      ctx.fill();
+      /* 虹膜：几道同心细弧，给出「机械舱门」的科技感 */
+      ctx.save();
+      ctx.strokeStyle = `rgba(255,255,255,${0.16 * lit})`;
+      ctx.lineWidth = 1;
+      for (let i = 1; i <= 3; i++) {
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, v.rx * (0.30 + i * 0.24), v.ry * (0.22 + i * 0.24), 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
 
       /* 地上的孔光亮斑 */
       const gy = geo.floorY + (h - geo.floorY) * 0.30;
-      const spot = ctx.createRadialGradient(v.x + ventW / 2, gy, 2, v.x + ventW / 2, gy, w * 0.11);
-      spot.addColorStop(0, `rgba(160,200,232,${0.16 * lit})`);
+      const sx = cx + v.dir * w * 0.06;
+      const spot = ctx.createRadialGradient(sx, gy, 2, sx, gy, w * 0.13);
+      spot.addColorStop(0, `rgba(160,200,232,${0.18 * lit})`);
       spot.addColorStop(1, 'rgba(160,200,232,0)');
       ctx.save();
-      ctx.translate(v.x + ventW / 2, gy);
-      ctx.scale(1, 0.26);
-      ctx.translate(-(v.x + ventW / 2), -gy);
+      ctx.translate(sx, gy);
+      ctx.scale(1, 0.24);
+      ctx.translate(-sx, -gy);
       ctx.fillStyle = spot;
-      ctx.fillRect(v.x + ventW / 2 - w * 0.11, gy - w * 0.11, w * 0.22, w * 0.22);
+      ctx.fillRect(sx - w * 0.13, gy - w * 0.13, w * 0.26, w * 0.26);
       ctx.restore();
     });
   }
@@ -2390,16 +2524,11 @@
     ctx.restore();
   }
 
-  /** 地面倒影：把爻条沿镜面镜像一份，越远越淡 */
-  function drawReflection(ctx, P, geo, data, moving) {
+  /** 地面倒影：把爻板沿镜面镜像一份，越远越淡 */
+  function drawReflection(ctx, geo, data, moving) {
     const rows = geo.rows;
-    const floorY = geo.baseY;          // 以底座顶面为镜面：卦象映在金属盘与地面上
+    const floorY = geo.floorY;         // 镜面地面线
     const modelH = (rows.length - 1) * geo.gap * geo.scale + geo.hy * geo.scale * 2;
-    // 镜像投影器：绕地平线翻转
-    const Pm = (x, y, z) => {
-      const p = P(x, y, z);
-      return [p[0], 2 * floorY - p[1], p[2]];
-    };
     for (let i = rows.length - 1; i >= 0; i--) {
       const yang = rows[i] === 1;
       // 投影器里 +y 朝上（屏幕 y = cy - yv），故上爻取正、下爻取负，
@@ -2414,35 +2543,46 @@
       }
       e = Math.min(1, e);
       // 该爻离地面的距离 → 倒影沉入地面多深 → 越深越淡
-      const yScreen = P(0, y, 0)[1];
+      const yScreen = geo.cy - y * geo.scale;
       const depth = Math.max(0, floorY - yScreen);
-      const fade = 0.30 * Math.max(0.05, 1 - depth / Math.max(1, modelH * 0.95));
-      if (fade < 0.012) return;
+      const fade = 0.26 * Math.max(0.05, 1 - depth / Math.max(1, modelH * 0.95));
+      if (fade < 0.012) continue;
       const segs = yang ? [[-geo.hx, geo.hx]] : [[-geo.hx, -13], [13, geo.hx]];
       segs.forEach(([x0, x1]) => {
-        drawYao3D(ctx, Pm, {
-          hx: (x1 - x0) / 2, hy: geo.hy, hz: geo.hz, r: geo.r,
-          cy: y, cx0: (x0 + x1) / 2,
-          barRGB: geo.barRGB, movRGB: geo.movRGB, edgeRGB: geo.edgeRGB
-        }, e, isMov, fade);
+        drawYao3D(ctx, geo, { x0, x1, y }, e, isMov, fade, 1);
       });
     }
   }
 
-  function drawVizHex3D(ctx, w, h, geo, gf) {
+  function drawVizHex3D(ctx, w, h, geo, gf, dt) {
     const data = vizSpectrum();
     const hd = vizHexData();
     const rows = geo.rows, moving = hd.moving;
-    const P = makeProjector(geo.cx, geo.cy, geo.scale);
-
     /* 深色展厅：空间 → 底座 → 倒影 → 卦体 */
     drawRoom3D(ctx, w, h, geo);
     drawPedestal(ctx, geo);
     drawFloorShadow(ctx, geo);
-    drawReflection(ctx, P, geo, data, moving);
 
-    /* 背后的雾（depth < 0 的团）—— 模型立在雾中 */
-    drawGasFog(ctx, w, h, gf, 'behind');
+    /* 镜面地面：模型暖光的倒影 */
+    {
+      const en = Math.min(1, vizEnergy * 1.4 + vizBass * 0.6);
+      const rh = (h - geo.floorY) * 0.62;
+      const rg = ctx.createLinearGradient(0, geo.floorY, 0, geo.floorY + rh);
+      rg.addColorStop(0, `rgba(255,196,120,${0.085 * (0.4 + en)})`);
+      rg.addColorStop(0.45, `rgba(255,176,104,${0.028 * (0.4 + en)})`);
+      rg.addColorStop(1, 'rgba(255,170,96,0)');
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = rg;
+      ctx.fillRect(geo.cx - geo.hx * geo.scale * 1.1, geo.floorY, geo.hx * geo.scale * 2.2, rh);
+      ctx.restore();
+    }
+    drawReflection(ctx, geo, data, moving);
+
+    /* 丝缕系统：推进 → 地面雾影 → 后景丝缕 */
+    filUpdate(dt, gf);
+    filReflect(ctx, w, h, gf);
+    filDraw(ctx, w, h, 'behind', gf);
 
     // 自下而上绘制：上方各爻的顶面才不会盖住下方爻身
     for (let i = rows.length - 1; i >= 0; i--) {
@@ -2463,46 +2603,78 @@
 
       const segs = yang ? [[-geo.hx, geo.hx]] : [[-geo.hx, -13], [13, geo.hx]];
       segs.forEach(([x0, x1]) => {
-        drawYao3D(ctx, P, {
-          hx: (x1 - x0) / 2, hy: geo.hy, hz: geo.hz, r: geo.r,
-          cy: y, cx0: (x0 + x1) / 2,
-          barRGB: geo.barRGB, movRGB: geo.movRGB, edgeRGB: geo.edgeRGB
-        }, e, isMov, 1);
+        drawYao3D(ctx, geo, { x0, x1, y }, e, isMov, 1, 0);
       });
 
       /* 动爻标记：右侧一枚朱红圆点，随鼓点点亮 */
       if (isMov) {
-        const p = P(geo.hx + 20, y, 0);
+        const px = geo.cx + (geo.hx + 20) * geo.scale;
+        const py = geo.cy - y * geo.scale;
         const pulse = 0.45 + 0.55 * Math.min(1, vizBass * 2.2 + 0.25);
         ctx.fillStyle = `rgba(232,120,96,${pulse})`;
         ctx.beginPath();
-        ctx.arc(p[0], p[1], 3.6, 0, Math.PI * 2);
+        ctx.arc(px, py, 3.6, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = `rgba(232,120,96,${pulse * 0.22})`;
         ctx.beginPath();
-        ctx.arc(p[0], p[1], 7.5, 0, Math.PI * 2);
+        ctx.arc(px, py, 7.5, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
     /* 面前的雾 + 音层名标注 */
-    drawGasFog(ctx, w, h, gf, 'front');
+    filDraw(ctx, w, h, 'front', gf);
+
+    /* 卦象的暖金辉光：光溢到四周的雾上（模型是这场景里的光源） */
+    const energy2 = Math.min(1, vizEnergy * 1.4 + vizBass * 0.6);
+    const bloomR = geo.hx * geo.scale * 2.8;
+    const bloom = ctx.createRadialGradient(geo.cx, geo.cy, 4, geo.cx, geo.cy, bloomR);
+    bloom.addColorStop(0, `rgba(255,198,124,${0.115 * (0.45 + energy2 * 0.75)})`);
+    bloom.addColorStop(0.40, `rgba(255,172,104,${0.040 * (0.45 + energy2 * 0.75)})`);
+    bloom.addColorStop(1, 'rgba(255,160,90,0)');
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = bloom;
+    ctx.fillRect(geo.cx - bloomR, geo.cy - bloomR, bloomR * 2, bloomR * 2);
+    ctx.restore();
+
+    /* 镜头横向耀斑：模型高度上的一道水平光（科技感的一笔） */
+    {
+      const sw = w * 0.44;
+      const sg = ctx.createLinearGradient(geo.cx - sw, 0, geo.cx + sw, 0);
+      sg.addColorStop(0, 'rgba(255,224,186,0)');
+      sg.addColorStop(0.5, `rgba(255,236,208,${0.085 * (0.4 + energy2)})`);
+      sg.addColorStop(1, 'rgba(255,224,186,0)');
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = sg;
+      ctx.fillRect(geo.cx - sw, geo.cy - 0.8, sw * 2, 1.6);
+      ctx.fillStyle = sg;
+      ctx.globalAlpha = 0.35;
+      ctx.fillRect(geo.cx - sw, geo.cy - 5, sw * 2, 10);
+      ctx.restore();
+    }
+
+    filLabels(ctx, w, h, gf);
   }
 
   /** 模型尺寸与鼓点缩放（含圆形金属底座） */
   function vizModelGeom(w, h) {
     const rows = vizHexData().rows;
-    const barH = 12, gap = 25;
+    vizCW = w; vizCH = h;
+    const barH = 12, gap = 23;
     const totalH = (rows.length - 1) * gap + barH + 14;
-    const scale = Math.min(w / 340, (h * 0.58) / totalH);
+    const scale = Math.min(w / 340, (h * 0.52) / totalH);
     // 鼓点缩放：播放中随低频起伏，停止后由 release 缓慢归位
     const s = scale * (1 + vizBass * 0.11 + vizEnergy * 0.035);
-    const cy = h * 0.40;
+    const cy = h * 0.47;
     // 底座：卦象立于一枚圆形金属底座上；镜面地面在底座前缘
     const bottomEdge = cy + ((rows.length - 1) / 2) * gap * s + (barH / 2) * s;
     const pedestalH = Math.max(5, h * 0.032);
     const baseY = bottomEdge + 1;                 // 底座顶面（卦象落座处）
     const floorY = baseY + pedestalH;             // 镜面地面线
+    // 供端到端测试读取真实几何（避免测试里写死常量而随改动腐化）
+    window.__gxVizGeo = { scale: s, gap, cy, barH, rows: rows.length, floorY, baseY };
     return {
       cx: w * 0.5,
       cy,
@@ -2511,9 +2683,9 @@
       pedestalH,
       scale: s,
       // 卦象：厚实长方体，古铜金属；动爻偏朱，边缘自带暖金自发光
-      hx: 62, hy: barH / 2, hz: 10, r: 6.2,
+      hx: 62, hy: barH / 2, hz: 13, r: 2.2,
       gap, rows,
-      barRGB: [152, 108, 62], movRGB: [196, 104, 66], edgeRGB: [22, 14, 8],
+      barRGB: [140, 104, 66], movRGB: [180, 102, 68], edgeRGB: [18, 12, 8],
       goldRGB: [255, 202, 132]
     };
   }
@@ -2742,8 +2914,8 @@
 
   /* 画质档：性能模式降粒子数与细节层，低配手机更稳 */
   const VIZ_QUALITY = {
-    high: { max: 36, samples: 14, puff: [34, 24], spawn: 1.0, glow: 1.0, reflect: 1.0, ceiling: 1.0 },
-    perf: { max: 14, samples: 7, puff: [28, 18], spawn: 1.7, glow: 0.72, reflect: 0.55, ceiling: 0.6 }
+    high: { max: 36, samples: 14, puff: [34, 24], spawn: 1.0, glow: 1.0, reflect: 1.0, ceiling: 1.0, fil: 820, filTrail: 7, filStep: 1 },
+    perf: { max: 14, samples: 7, puff: [28, 18], spawn: 1.7, glow: 0.72, reflect: 0.55, ceiling: 0.6, fil: 190, filTrail: 6, filStep: 3 }
   };
   let vizQuality = 'high';
   function vizQ() { return VIZ_QUALITY[vizQuality] || VIZ_QUALITY.high; }
@@ -2755,6 +2927,7 @@
   let flowIntro = 0;               // 渐入进度 0..1（音乐起了雾才现）
   let flowBands = [];              // 各流的发射计时
   let vizModel = null;             // 当前模型几何（供绕行计算）
+  let vizCW = 0, vizCH = 0;        // 画布尺寸（丝缕系统用）
   let vizBass = 0;                 // 低频鼓点包络
   let vizLastT = 0;
   let vizCanvasW = 0;              // 画布 CSS 宽度（归一化坐标换算用）
@@ -2884,6 +3057,16 @@
     // 供端到端测试读取当前流线状态
     window.__gxFlowMode = flowMode;
     window.__gxFlowKinds = flowLines.map((l) => l.kind);
+    // 供端到端测试读取丝缕系统状态
+    window.__gxFil = () => ({
+      n: filParts.length,
+      intro: flowIntro,
+      sample: filParts.length ? {
+        x: Math.round(filParts[0].x), y: Math.round(filParts[0].y),
+        z: +filParts[0].z.toFixed(2), trail: filParts[0].trail.length
+      } : null
+    });
+    window.__gxFilXs = () => filParts.map((p) => p.x);
     // 鼓点包络：低频能量上升快、回落慢 —— 停止后缓缓停下
     const target = vizBassTarget;
     const k = target > vizBass
@@ -3117,136 +3300,355 @@
    * 三阶段与参考图一致：渐入（雾随音乐成形）→ 流动 → 渐出（排空渐弱）。
    * =============================================================== */
 
-  /** 雾团精灵（按颜色缓存：径向渐变的柔雾团）
-   *  ---------------------------------------------------------------
-   * 造型：中心是暖金色的核（内部辉光），外层是冰蓝色的躯体，
-   * 边缘完全透明 —— additive 叠加后重叠处自然变亮，且不会有硬边。
-   */
-  const FOG_ICE = '150, 205, 240';
-  const FOG_GOLD = '255, 206, 142';
-  const fogSprites = {};
+  /* ===============================================================
+   * 声波云雾 · 丝缕系统（方案 B：湍流丝缕）
+   * ---------------------------------------------------------------
+   * 一比一照参考图的做法：
+   *   · 雾自左右两侧的金属气口涌入（气口本身建模：环 + 内芯 + 光锥 + 地照）
+   *   · 粒子被「旋度噪声场」推动，拉成一条条细丝（拖尾折线）
+   *   · 靠近卦象时被切向力推着绕行，两股雾在卦象处相遇，汇成蝴蝶结
+   *   · 颜色：外层冰白（体积雾），内核暖金（近卦象、受光处）
+   *   · 镜面地面有雾的倒影
+   * 丝 = 两次描边：宽而淡的辉光（体积感）+ 细而亮的芯（丝感）。
+   * =============================================================== */
 
-  /** 两色按比例混合（层色与冰蓝相融，保持主色调冰蓝） */
-  function mixRGB(a, b, t) {
-    const pa = a.split(',').map(Number);
-    const pb = b.split(',').map(Number);
-    return pa.map((v, i) => Math.round(v * t + pb[i] * (1 - t))).join(',');
+  let filParts = [];          // 丝缕粒子
+  let filAcc = 0;             // 生成累加器
+  let filT = 0;               // 湍流场时间
+  let filAdapt = 1;           // 自适应系数：帧率吃紧就减丝，流畅就拉满
+  let filFrameAcc = 0, filFrameN = 0;
+
+  /* ---- 值噪声 / fbm（湍流场） ---- */
+  function vizHash(x, y) {
+    const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+    return n - Math.floor(n);
   }
-
-  function fogSprite(rgb) {
-    if (fogSprites[rgb]) return fogSprites[rgb];
-    const S = 96;
-    const c = document.createElement('canvas');
-    c.width = S; c.height = S;
-    const g = c.getContext('2d');
-    const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
-    grad.addColorStop(0, `rgba(${FOG_GOLD},0.40)`);     // 暖金内核
-    grad.addColorStop(0.16, `rgba(${rgb},0.26)`);       // 冰蓝躯体
-    grad.addColorStop(0.44, `rgba(${rgb},0.10)`);
-    grad.addColorStop(0.72, `rgba(${rgb},0.025)`);
-    grad.addColorStop(1, `rgba(${rgb},0)`);
-    g.fillStyle = grad;
-    g.fillRect(0, 0, S, S);
-    fogSprites[rgb] = c;
-    return c;
+  function vizNoise2(x, y) {
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const xf = x - xi, yf = y - yi;
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const a = vizHash(xi, yi), b = vizHash(xi + 1, yi);
+    const c = vizHash(xi, yi + 1), d = vizHash(xi + 1, yi + 1);
+    return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+  }
+  function vizFbm(x, y, oct) {
+    let s = 0, amp = 0.5, f = 1;
+    for (let i = 0; i < (oct || 3); i++) { s += amp * vizNoise2(x * f, y * f); f *= 2.03; amp *= 0.5; }
+    return s;
   }
 
   /**
-   * 绘制体积雾气
-   * @param {string} pass 'behind'（模型之后）| 'front'（模型之前 + 音层名）
+   * 左右气口的几何
+   * 竖长椭圆孔洞，贴左右画面边缘（大半在画外），雾由此涌入。
    */
-  function drawGasFog(ctx, w, h, globalFade, pass) {
-    const fade = globalFade * flowIntro;
-    if (fade <= 0.012) return;
-    const q = vizQ();
-    const spr = {};
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
+  function vizPorts(w, h, geo) {
+    const R = Math.min(h * 0.34, 132);
+    const cy = geo.cy;
+    return {
+      R,
+      l: { x: -R * 0.26, y: cy, rx: R * 0.44, ry: R * 1.00, dir: 1 },
+      r: { x: w + R * 0.26, y: cy, rx: R * 0.44, ry: R * 1.00, dir: -1 }
+    };
+  }
+
+  /** 生成一条丝缕 */
+  function filSpawn(w, h, geo, kind, st) {
+    const ports = vizPorts(w, h, geo);
+    const fromLeft = Math.random() < 0.5;
+    const p0 = fromLeft ? ports.l : ports.r;
+    const a = (Math.random() - 0.5) * 2.2;          // 椭圆内散布
+    const rr = Math.sqrt(Math.random());
+    filParts.push({
+      x: p0.x + Math.cos(a) * p0.rx * rr,
+      y: p0.y + Math.sin(a) * p0.ry * rr,
+      // lane：这条丝在羽流里的位置（-1 下缘 … +1 上缘），全程不变 ——
+      // 参考图里那股羽流自两侧涌入、在卦象处收腰分瓣，靠的就是这个固定的「轨道位」。
+      lane: (Math.random() * 2 - 1),
+      spread: h * 0.33 * (0.82 + Math.random() * 0.36),
+      z: (Math.random() * 2 - 1) * 0.85,           // 深度：负在后景
+      dir: fromLeft ? 1 : -1,                       // 推进方向（向右为 1）
+      swirl: Math.random() < 0.5 ? 1 : -1,          // 绕行方向：上绕 / 下绕
+      age: 0,
+      life: 190 + Math.random() * 240,
+      w: 0.4 + Math.random() * 0.85,               // 粗细权重
+      gold: Math.random() * 0.42,                   // 暖金倾向
+      kind, st,
+      trail: []
+    });
+  }
+
+  /**
+   * 丝缕系统的推进：生成 + 湍流平流 + 绕行 + 深度投影
+   */
+  function filUpdate(dt, gf) {
     const geo = vizModel;
-    const labels = [];
-    // 频谱驱动的整体调制：音量决定亮度与体量，低频决定辉光
-    // 限幅：additive 叠加极易过曝成白，故亮度上限压在 1.1 以内
-    const bright = Math.min(1.1, (0.34 + 0.52 * vizLevel) * (0.74 + 0.32 * vizLow)) * q.glow;
-    const sizeK = (0.84 + 0.42 * vizLevel) * q.glow;
+    if (!geo) return;
+    const q = vizQ();
+    const w = vizCW, h = vizCH;
+    if (!w || !h) return;
+    filT += dt;
+    const k = dt / 0.0167;            // dt 单位是秒 → 折算成「帧倍数」
 
-    for (let i = flowLines.length - 1; i >= 0; i--) {
-      const line = flowLines[i];
-      const behind = (line.z || 0) < 0;
-      if ((pass === 'behind') !== behind) continue;
-      if (line.fade !== undefined && line.fade <= 0.02) continue;
+    /* 帧率自适应：连续 30 帧的平均耗时决定丝的数量上限 */
+    filFrameAcc += dt; filFrameN++;
+    if (filFrameN >= 30) {
+      const avg = filFrameAcc / filFrameN;
+      if (avg > 0.034) filAdapt = Math.max(0.34, filAdapt * 0.86);
+      else if (avg < 0.020) filAdapt = Math.min(1, filAdapt * 1.06);
+      filFrameAcc = 0; filFrameN = 0;
+    }
+    const filCap = Math.max(40, Math.floor(q.fil * filAdapt));
 
-      const headX = flowHeadX(line, w);
-      const tailX = flowTailX(line, w);
-      if (headX < -30 || headX > w + 30) continue;
-
-      const SAMPLES = q.samples;
-      // 层色与冰蓝相融：主色调统一为冰蓝，层色只作辨识
-      const tint = mixRGB(line.st.fog || line.color, FOG_ICE, 0.42);
-      const sprite = spr[tint] || (spr[tint] = fogSprite(tint));
-      const isMain = line.kind === 'main';
-      // 前后景的体量差别：近处的雾团更大更亮
-      const depth = 1 + (line.z || 0) * 0.16;
-
-      for (let k = SAMPLES - 1; k >= 0; k--) {
-        const f = 1 - k / SAMPLES;                 // 0 = 尾，1 = 头
-        const px = tailX + (headX - tailX) * f;
-        if (px < -40 || px > w + 40) continue;
-        // 高频 → 细碎湍流：摆动幅度随高频增强，频率也随高频加快
-        const turb = vizHigh * 4.2;
-        const py = flowYAt(line, px, w, h)
-          + Math.sin(vizT * (1.1 + 5.0 * vizHigh) + line.wob) * (1.2 + turb);
-        const bell = Math.sin(f * Math.PI);         // 中段最浓（雾芯）
-        let size = line.puff * (0.45 + 0.90 * f) * (0.75 + 0.45 * bell) * depth * sizeK;
-        let alpha = fade * (0.085 + 0.24 * bell + 0.085 * f) * bright * (isMain ? 1 : 0.92);
-        if (line.fade !== undefined) alpha *= line.fade;
-
-        // 卦体处：雾团涨大、变薄（撞上爻结构后散开，而不是堆成一团白光）
-        if (geo) {
-          const halfW = geo.hx * geo.scale * 1.5;
-          const u = (px - (geo.cx - halfW)) / Math.max(1, 2 * halfW);
-          if (u > 0 && u < 1) {
-            const grow = 1 + 0.55 * Math.sin(u * Math.PI);
-            size *= grow;
-            alpha *= (2 / (1 + grow)) * (1 - 0.45 * Math.sin(u * Math.PI));
-          }
+    /* 生成：演奏中按能量补充；停止后不再生成（余雾自行散尽） */
+    if (flowMode === 'playing' && flowIntro > 0.02) {
+      const layers = activeLayerWaves();
+      filAcc += k * (filCap / 190) * (0.42 + 0.78 * vizLevel) * flowIntro;
+      let guard = 0;
+      while (filAcc >= 1 && guard++ < 60) {
+        filAcc -= 1;
+        if (filParts.length >= filCap) break;
+        if (layers.length && Math.random() < 0.42) {
+          const st = layers[(Math.random() * layers.length) | 0];
+          filSpawn(w, h, geo, st.key, st);
+        } else {
+          filSpawn(w, h, geo, 'main', LAYER_WAVE_STYLES.core);
         }
-        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-        ctx.drawImage(sprite, px - size / 2, py - size / 2, size, size);
-      }
-
-      // 音层名：贴在该层最靠前的那团雾头上（每层只留一个）
-      if (!isMain) {
-        const idx = labels.findIndex((l) => l.kind === line.kind);
-        if (idx < 0) labels.push({ kind: line.kind, line, x: line.x });
-        else if (line.x > labels[idx].x) { labels[idx].line = line; labels[idx].x = line.x; }
       }
     }
 
-    ctx.restore();
+    /* 平流：主流 + 切向绕行 + 旋度噪声湍流 + 卦象排斥 + 中轴收束 */
+    const F = 0.0052, E = 2.0;
+    const mcx = geo.cx, mcy = geo.cy;
+    const halfW = geo.hx * geo.scale * 1.55;
+    const modelHalfH = (geo.gap * (geo.rows.length - 1) * geo.scale * 0.5) + geo.hy * geo.scale + 10;
+    const tOff = filT * 0.0011;
+    const turbK = 0.55 + vizHigh * 0.85;
 
-    /* 音层名标注：深色底衬 + 该层颜色 */
-    if (pass === 'front' && fade > 0.05) {
-      ctx.save();
-      ctx.font = '600 9.5px "PingFang SC", "Microsoft YaHei", sans-serif';
-      ctx.textBaseline = 'middle';
-      ctx.textAlign = 'center';
-      labels.forEach(({ line }) => {
-        const headX = flowHeadX(line, w);
-        if (headX < 26 || headX > w - 26) return;
-        const y = flowYAt(line, headX, w, h);
-        if (y < 10 || y > h - 6) return;
-        const tw = ctx.measureText(line.st.name).width;
-        ctx.fillStyle = `rgba(10,16,23,${0.66 * fade})`;
-        ctx.beginPath();
-        ctx.roundRect(headX - tw / 2 - 4, y - 8.5, tw + 8, 12.5, 4);
-        ctx.fill();
-        ctx.fillStyle = `rgba(${line.color},${0.98 * fade})`;
-        ctx.fillText(line.st.name, headX, y - 2.2);
-      });
-      ctx.textAlign = 'left';
-      ctx.restore();
+    for (let i = filParts.length - 1; i >= 0; i--) {
+      const p = filParts[i];
+      p.age++;
+      if (p.age > p.life || p.x < -w * 0.4 || p.x > w * 1.4) { filParts.splice(i, 1); continue; }
+
+      const dx = p.x - mcx, dy = p.y - mcy;
+      const dist = Math.hypot(dx, dy) + 1;
+      const tanX = -dy / dist, tanY = dx / dist;
+      const near = Math.max(0, 1 - dist / (w * 0.40));
+
+      /* ---- 目标轨道：宽羽流 → 卦象处收腰 → 贴着卦体上下缘走 ---- */
+      const waist = Math.exp(-Math.pow((p.x - mcx) / (w * 0.30), 2));   // 1 = 中心
+      const inner = modelHalfH * 0.94;                                 // 卦体外缘
+      const outer = inner + Math.max(0, p.spread - inner) * (1 - waist);
+      const off = inner + (outer - inner) * Math.abs(p.lane);
+      const yT = mcy + (p.lane >= 0 ? -off : off);
+
+      // 主流：向对侧推进
+      let vx = p.dir * (1.9 + vizLevel * 2.4);
+      // 弹性回归轨道（形由轨道定，湍流只做质感）
+      let vy = (yT - p.y) * 0.062;
+
+      // 切向绕行：靠近卦象时被推开，形成包裹感
+      const swirl = near * near * 1.15 * p.swirl;
+      vx += tanX * swirl;
+      vy += tanY * swirl * 0.5;
+
+      // 湍流：旋度噪声（无散度 → 自然的卷曲与分叉）
+      const n0 = vizFbm(p.x * F, p.y * F + tOff, 3);
+      const nx = vizFbm((p.x + E) * F, p.y * F + tOff, 3);
+      const ny = vizFbm(p.x * F, (p.y + E) * F + tOff, 3);
+      let cx = (ny - n0) / E * 900;
+      let cy = -(nx - n0) / E * 900;
+      cx = Math.max(-2.4, Math.min(2.4, cx));
+      cy = Math.max(-2.4, Math.min(2.4, cy));
+      vx += cx * turbK * 1.05;
+      vy += cy * turbK * 1.05;
+
+      p.x += vx * k;
+      p.y += vy * k;
+      p.z += (Math.random() - 0.5) * 0.016 + p.dir * 0.0018;
+
+      // 深度投影：越远越向灭点收、体积越小
+      const ps = 1 / (1 + p.z * 0.11);
+      p.trail.push(mcx + (p.x - mcx) * ps, mcy + (p.y - mcy) * ps);
+      const maxTrail = q.filTrail * 2;
+      if (p.trail.length > maxTrail) p.trail.splice(0, 2);
     }
   }
+
+  /**
+   * 绘制丝缕
+   * ---------------------------------------------------------------
+   * 两层结构（这是「体积感」的关键）：
+   *   · 辉光层：所有丝缕的宽描边画进离屏画布，再**整层做一次高斯模糊**后叠上来
+   *     —— 这一层提供烟的柔软体积与空气感（一次性模糊，比逐条模糊便宜得多）
+   *   · 芯层：细而亮的描边直接画在主画布上，保持丝缕的锐利与结构
+   * @param {string} pass 'behind'（模型之后）| 'front'（模型之前）
+   */
+  let fogCvB = null, fogCvF = null;      // 离屏辉光层
+  function fogLayer(w, h, back) {
+    const key = back ? 'fogCvB' : 'fogCvF';
+    let cv = back ? fogCvB : fogCvF;
+    const scale = vizQuality === 'perf' ? 0.5 : 1;     // 性能档降分辨率
+    const tw = Math.max(2, Math.round(w * scale));
+    const th = Math.max(2, Math.round(h * scale));
+    if (!cv) { cv = document.createElement('canvas'); if (back) fogCvB = cv; else fogCvF = cv; }
+    if (cv.width !== tw || cv.height !== th) { cv.width = tw; cv.height = th; }
+    const g = cv.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, tw, th);
+    g.setTransform(scale, 0, 0, scale, 0, 0);
+    return g;
+  }
+
+  function filDraw(ctx, w, h, pass, globalFade) {
+    const fade = globalFade * flowIntro;
+    if (fade <= 0.012 || !filParts.length) return;
+    if (window.__gxNoFog) return;          // 调试开关
+    const geo = vizModel;
+    if (!geo) return;
+    const q = vizQ();
+    const level = Math.min(1, vizLevel);
+    const back = pass === 'behind';
+
+    /* ---- 辉光层：画进离屏画布 ---- */
+    const g = fogLayer(w, h, back);
+    g.globalCompositeOperation = 'lighter';
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    const cores = [];
+    for (let i = 0; i < filParts.length; i++) {
+      const p = filParts[i];
+      const isBack = p.z < 0;
+      if (isBack !== back) continue;
+      const t = p.trail;
+      if (t.length < 4) continue;
+
+      const fadeIn = Math.min(1, p.age / 20);
+      const fadeOut = Math.min(1, (p.life - p.age) / 45);
+      // 近模型程度 → 暖金内核；远 → 冰白体积雾
+      const near = Math.max(0, 1 - Math.hypot(p.x - geo.cx, p.y - geo.cy) / (geo.hx * geo.scale * 2.8));
+      const gAmt = Math.max(0, Math.min(1, near * near * 1.5 + p.gold * 0.20));
+      const r = Math.round(198 + gAmt * 57);
+      const gg = Math.round(232 - gAmt * 46);
+      const b = Math.round(255 - gAmt * 140);
+      const depthK = isBack ? 0.34 : 1;
+      const a = fade * fadeIn * fadeOut * depthK * (0.016 + 0.028 * level) * p.w * (0.75 + near * 1.25);
+      if (a < 0.003) continue;
+
+      // 宽描边（辉光）
+      g.strokeStyle = `rgba(${r},${gg},${b},${a})`;
+      g.lineWidth = (7.5 + p.w * 13.5) * (isBack ? 0.68 : 1);
+      g.beginPath();
+      g.moveTo(t[0], t[1]);
+      for (let k = 2; k < t.length; k += 2) g.lineTo(t[k], t[k + 1]);
+      g.stroke();
+
+      cores.push([t, r, gg, b, a, p, isBack]);
+    }
+
+    /* ---- 整层模糊后叠回主画布：这一下就是「体积」 ---- */
+    const layer = back ? fogCvB : fogCvF;
+    if (layer) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const blur = q.filStep > 1 ? 3 : 4;
+      if (ctx.filter !== undefined) ctx.filter = `blur(${blur}px)`;
+      ctx.drawImage(layer, 0, 0, w, h);
+      ctx.filter = 'none';
+      ctx.restore();
+    }
+
+    /* ---- 芯层：细而亮的丝，直接画在主画布上 ---- */
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (let i = 0; i < cores.length; i++) {
+      const [t, r, gg, b, a, p, isBack] = cores[i];
+      ctx.strokeStyle = `rgba(${r},${gg},${b},${a * 0.85})`;
+      ctx.lineWidth = (0.6 + p.w * 1.3) * (isBack ? 0.65 : 1);
+      ctx.beginPath();
+      ctx.moveTo(t[0], t[1]);
+      for (let k = 2; k < t.length; k += 2) ctx.lineTo(t[k], t[k + 1]);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * 镜面地面上的雾影：把丝缕沿镜面翻转、压淡
+   */
+  function filReflect(ctx, w, h, globalFade) {
+    const fade = globalFade * flowIntro;
+    const q = vizQ();
+    if (fade <= 0.02 || !filParts.length || !vizModel) return;
+    const floorY = vizModel.floorY;
+    const step = q.filStep;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, floorY, w, h - floorY);
+    ctx.clip();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (let i = 0; i < filParts.length; i += step) {
+      const p = filParts[i];
+      const t = p.trail;
+      if (t.length < 4) continue;
+      const lastY = t[t.length - 1];
+      if (lastY > floorY) continue;               // 只有地面之上的雾才有倒影
+      const fadeIn = Math.min(1, p.age / 20);
+      const fadeOut = Math.min(1, (p.life - p.age) / 45);
+      const a = fade * fadeIn * fadeOut * 0.045 * q.reflect * p.w;
+      if (a < 0.003) continue;
+      ctx.strokeStyle = `rgba(186,216,244,${a})`;
+      ctx.lineWidth = 1.2 + p.w * 2.4;
+      ctx.beginPath();
+      ctx.moveTo(t[0], 2 * floorY - t[1]);
+      for (let k = 2; k < t.length; k += 2) ctx.lineTo(t[k], 2 * floorY - t[k + 1]);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * 音层名标注：贴在每层最靠前的那条丝上
+   */
+  function filLabels(ctx, w, h, globalFade) {
+    const fade = globalFade * flowIntro;
+    if (fade < 0.06 || !filParts.length) return;
+    const best = {};
+    for (let i = 0; i < filParts.length; i++) {
+      const p = filParts[i];
+      if (p.kind === 'main') continue;
+      const t = p.trail;
+      if (t.length < 4) continue;
+      const prog = p.dir > 0 ? p.x : (w - p.x);
+      const b = best[p.kind];
+      if (!b || prog > b.prog) {
+        best[p.kind] = { prog, x: t[t.length - 2], y: t[t.length - 1], st: p.st };
+      }
+    }
+    ctx.save();
+    ctx.font = '600 9.5px "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    Object.keys(best).forEach((key) => {
+      const b = best[key];
+      if (!b.st) return;
+      if (b.x < 30 || b.x > w - 30) return;
+      if (b.y < 12 || b.y > h - 8) return;
+      const tw = ctx.measureText(b.st.name).width;
+      ctx.fillStyle = `rgba(10,16,23,${0.62 * fade})`;
+      ctx.beginPath();
+      ctx.roundRect(b.x - tw / 2 - 4, b.y - 8.5, tw + 8, 12.5, 4);
+      ctx.fill();
+      ctx.fillStyle = `rgba(${b.st.color},${0.98 * fade})`;
+      ctx.fillText(b.st.name, b.x, b.y - 2.2);
+    });
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+
 
   /* ===============================================================
    * 卦历

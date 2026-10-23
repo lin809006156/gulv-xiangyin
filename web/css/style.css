@@ -2193,32 +2193,38 @@ html[data-font="l"] { --tabbar-h: 70px; }
 #btnCopyEmail { margin-left: auto; }
 
 /* ===============================================================
-   浮动播放栏（mini player，播放时滑出，贴在底部标签栏上方）
+   浮动播放栏（mini player）
+   ---------------------------------------------------------------
+   几何约束：与底部标签栏**同宽同轴**（同一枚胶囊的错觉），
+   且永远浮在标签栏**上方**、不与其重叠。
+   位置由 JS 实测标签栏高度后写入 --mp-bottom（见 app.js layoutMiniPlayer），
+   故字号档、安全区、横竖屏变化时都不会撞上。
    =============================================================== */
 .miniplayer {
   position: fixed;
-  left: 10px;
-  right: 10px;
-  bottom: calc(var(--tabbar-h) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(400px, calc(100% - 32px));
+  bottom: var(--mp-bottom, calc(var(--tabbar-h) + 10px));
   z-index: 60;
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 54px;
-  padding: 0 10px 0 12px;
-  border-radius: 20px;
+  gap: 7px;
+  height: 46px;
+  padding: 0 8px 0 13px;
+  border-radius: 23px;          /* 与标签栏同源的胶囊形 */
   background: var(--glass-bg-strong);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   box-shadow:
     0 1px 0 var(--glass-brd) inset,
     0 0 0 1px var(--glass-brd-out),
-    0 10px 30px rgba(16,26,36,.26);
-  animation: mpIn .26s cubic-bezier(.2,.85,.3,1);
+    0 8px 22px rgba(16,26,36,.22);
+  animation: mpIn .28s cubic-bezier(.2,.9,.25,1.06);
 }
 @keyframes mpIn {
-  from { transform: translateY(calc(100% + 24px)); opacity: 0; }
-  to   { transform: none; opacity: 1; }
+  from { transform: translateX(-50%) translateY(calc(100% + 20px)); opacity: 0; }
+  to   { transform: translateX(-50%); opacity: 1; }
 }
 .miniplayer[hidden] { display: none !important; }
 
@@ -2226,12 +2232,12 @@ html[data-font="l"] { --tabbar-h: 70px; }
 .mp-wave {
   display: flex;
   align-items: flex-end;
-  gap: 2.5px;
-  height: 18px;
+  gap: 2px;
+  height: 15px;
   flex: none;
 }
 .mp-wave i {
-  width: 3px;
+  width: 2.5px;
   border-radius: 2px;
   background: linear-gradient(180deg, var(--cinnabar-lt), var(--cinnabar));
   height: 30%;
@@ -2277,28 +2283,28 @@ html[data-font="l"] { --tabbar-h: 70px; }
   flex: none;
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   color: var(--cinnabar);
   background: rgba(var(--tint),.72);
   box-shadow: 0 0 0 1px var(--glass-brd-out), 0 3px 12px rgba(178,58,46,.16);
-  transition: transform .16s ease, background .16s ease, color .16s ease;
+  transition: transform .18s cubic-bezier(.2,.9,.25,1.1), background .18s ease, color .18s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.mp-btn:active { transform: scale(.9); }
-.mp-btn svg { width: 20px; height: 20px; fill: currentColor; }
+.mp-btn:active { transform: scale(.88); }
+.mp-btn svg { width: 17px; height: 17px; fill: currentColor; }
 .mp-ico-pause { display: none; }
 .miniplayer.is-playing .mp-ico-play { display: none; }
 .miniplayer.is-playing .mp-ico-pause { display: block; }
 .mp-btn-sm {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   color: var(--ink-2);
   background: transparent;
   box-shadow: none;
 }
-.mp-btn-sm svg { width: 17px; height: 17px; }
+.mp-btn-sm svg { width: 15px; height: 15px; }
 .mp-btn-sm:active { background: rgba(var(--tint),.6); }
 .mp-btn-sm[aria-pressed="true"] {
   color: var(--cinnabar);
@@ -2308,8 +2314,109 @@ html[data-font="l"] { --tabbar-h: 70px; }
 .mp-btn-sm.is-mute { color: var(--ink-4); }
 .mp-btn-sm.is-mute .mpv-wave { opacity: .25; }
 
-/* 浮动栏显示时，给页面内容留出空间（浮动栏高 54 + 间距 8） */
+/* 浮动栏显示时，给页面内容留出空间（浮动栏高 46 + 间距 14） */
 body.has-miniplayer main,
 body.has-miniplayer .sheet-body {
-  padding-bottom: calc(var(--tabbar-h) + 34px + 62px);
+  padding-bottom: calc(var(--mp-bottom, calc(var(--tabbar-h) + 10px)) + 46px + 14px);
+}
+
+/* ===============================================================
+   液态玻璃 · 按压动效
+   ---------------------------------------------------------------
+   玻璃被按下去时不该「塌陷」，而该**被压出一个凹面**：触点处的光
+   往旁边散开、整体略微收窄、松手带一点液体回弹的过冲。
+   三件套：
+     1. 触点高光：--px / --py 记触点，伪元素从该点散开（is-press）
+     2. 涟漪环：主操作键点按荡开一圈水纹（.lq-ripple，由 JS 生成）
+     3. 回弹：松手曲线带轻微过冲，读起来像液面归位
+   全部只动 transform / opacity，不触发布局，移动端不拖帧。
+   =============================================================== */
+
+/* 参与液态按压的玻璃按键（与 app.js 的 LIQUID_SEL 对应） */
+.btn, .tabbtn, .seg, .viz-mode, .mp-btn, .skin-opt,
+.segmented .tab, .amb-chip, .inst-play, .icon-btn, .vol-btn, .vision-clear {
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 1 · 触点高光 */
+.btn::after, .tabbtn::after, .seg::after, .viz-mode::after, .mp-btn::after,
+.skin-opt::after, .segmented .tab::after, .amb-chip::after, .inst-play::after,
+.icon-btn::after, .vol-btn::after, .vision-clear::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle 72% at var(--px, 50%) var(--py, 50%),
+    rgba(255,255,255,.60) 0%,
+    rgba(255,255,255,.22) 34%,
+    rgba(255,255,255,0) 68%);
+  transition: opacity .42s ease;
+}
+/* 按住时再压一道内凹的暗边，像玻璃被指尖压出浅坑 */
+.is-press::after {
+  opacity: 1;
+  transition-duration: .05s;
+  background:
+    radial-gradient(circle 72% at var(--px, 50%) var(--py, 50%),
+      rgba(255,255,255,.60) 0%,
+      rgba(255,255,255,.22) 34%,
+      rgba(255,255,255,0) 68%),
+    linear-gradient(180deg, rgba(16,26,36,.13) 0%, rgba(16,26,36,0) 58%);
+}
+
+/* 2 · 涟漪环（主操作键） */
+.lq-ripple {
+  position: absolute;
+  z-index: 4;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(.12);
+  opacity: .95;
+  background: radial-gradient(circle,
+    rgba(255,255,255,.46) 0%,
+    rgba(255,255,255,.20) 42%,
+    rgba(255,255,255,0) 70%);
+  mix-blend-mode: screen;
+  animation: lqRipple .62s cubic-bezier(.18,.68,.3,1) forwards;
+}
+@keyframes lqRipple {
+  from { transform: translate(-50%,-50%) scale(.12); opacity: .95; }
+  to   { transform: translate(-50%,-50%) scale(1);   opacity: 0; }
+}
+
+/* 3 · 收窄与回弹（过冲曲线 = 液体归位） */
+.btn, .tabbtn, .seg, .viz-mode, .segmented .tab, .amb-chip, .inst-play, .icon-btn {
+  transition:
+    transform .3s cubic-bezier(.2,.9,.25,1.14),
+    background .18s ease,
+    color .18s ease,
+    box-shadow .18s ease;
+}
+.btn:active, .tabbtn:active, .seg:active, .viz-mode:active,
+.segmented .tab:active, .amb-chip:active, .inst-play:active, .icon-btn:active {
+  transform: scale(.955);
+  /* 玻璃被压住时略微沉下去（不动 box-shadow，免得压掉胶囊自身的辉光） */
+  filter: brightness(.965);
+}
+.mp-btn:active { transform: scale(.88); }
+
+/* 图标随按压微缩，像被指尖压住的凸起 */
+.btn .play-icon, .btn .solf-icon, .btn .loop-icon, .tb-icon {
+  transition: transform .2s cubic-bezier(.2,.9,.25,1.1);
+}
+.btn:active .play-icon,
+.btn:active .solf-icon,
+.btn:active .loop-icon,
+.tabbtn:active .tb-icon { transform: scale(.86); }
+
+/* 4 · 状态切换的一下「涌起」（循环、疗愈音层等开关） */
+.is-pulse { animation: lqPulse .5s cubic-bezier(.2,.9,.25,1.1); }
+@keyframes lqPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(var(--tint),0); }
+  35%  { box-shadow: 0 0 0 6px rgba(var(--tint),.28), 0 4px 18px rgba(178,58,46,.22); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--tint),0); }
 }

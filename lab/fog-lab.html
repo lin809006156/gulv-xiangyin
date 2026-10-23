@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>烟雾方案对比台 · 学易心音</title>
+<style>
+  :root {
+    --ink: #23262b; --ink-2: #4a4f57; --ink-3: #7b818b; --ink-4: #a2a8b2;
+    --paper: #f4f1ea; --card: #fffdf9; --line: #e4ded2; --cinnabar: #b23a2e; --cinnabar-lt: #d4685a;
+    --ice: #6fb6e0; --gold: #e8b25c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px 22px 60px;
+    font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    color: var(--ink); background: var(--paper);
+    background-image: radial-gradient(1200px 500px at 20% -10%, rgba(178,58,46,.05), transparent 60%);
+  }
+  h1 { font-size: 21px; margin: 0 0 6px; letter-spacing: .02em; }
+  .lead { font-size: 13px; color: var(--ink-2); line-height: 1.8; margin: 0 0 20px; max-width: 980px; }
+  .lead b { color: var(--cinnabar); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; max-width: 1400px; }
+  .panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+    box-shadow: 0 2px 14px rgba(58,48,34,.06);
+  }
+  .panel > header { padding: 12px 14px 8px; }
+  .panel h2 { font-size: 14.5px; margin: 0 0 3px; display: flex; align-items: center; gap: 7px; }
+  .tag { font-size: 10.5px; font-weight: 700; color: #fff; background: var(--cinnabar); border-radius: 5px; padding: 1.5px 6px; letter-spacing: .04em; }
+  .tag.g { background: #2f6b4f; } .tag.b { background: #2b5b8a; } .tag.y { background: #8a6a1f; }
+  .panel .sub { font-size: 11.5px; color: var(--ink-3); line-height: 1.7; }
+  canvas { display: block; width: 100%; height: auto; background: #05080c; }
+  .panel .note { margin: 0; padding: 10px 14px 13px; font-size: 11.5px; color: var(--ink-2); line-height: 1.75; }
+  .panel .note b { color: var(--ink); }
+  .kpi { float: right; font-size: 10.5px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+  table { max-width: 1400px; border-collapse: collapse; margin-top: 22px; font-size: 12.5px; background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 14px rgba(58,48,34,.06); }
+  th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: rgba(120,105,85,.07); font-size: 12px; }
+  tr:last-child td { border-bottom: none; }
+  .pick { font-weight: 700; color: var(--cinnabar); }
+  .foot { max-width: 1400px; margin-top: 16px; font-size: 12px; color: var(--ink-3); line-height: 1.9; }
+  .foot code { background: rgba(120,105,85,.1); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; }
+</style>
+</head>
+<body>
+
+<h1>波形台烟雾 · 四种做法并排对比</h1>
+<p class="lead">
+  同一场景（暗调展厅 + 青铜卦象 + 冰蓝冷雾 / 暖金辉光），四种做法各跑各的实时循环。
+  动效完全一样（同样的冰蓝主色、同样的暖金辉光、同样的频谱起伏），
+  <b>差别只在「雾是怎么生成的」</b>。右上角是每帧耗时（毫秒），可直接看性能代价。
+</p>
+
+<div class="grid">
+
+  <section class="panel">
+    <header>
+      <h2><span class="tag">A</span> 现状：团块精灵 + 加色 <span class="kpi" id="kpiA">–</span></h2>
+      <div class="sub">沿路径撒一团团径向渐变精灵，additive 叠加，亮度限幅防过曝</div>
+    </header>
+    <canvas id="pA" width="640" height="400"></canvas>
+    <p class="note">
+      <b>问题</b>：每个雾团都是圆的，边界一眼看穿；叠出来的「光团」缺乏内部结构，
+      远看像发光的棉花糖而不是烟。<b>成本</b>：最低（三端通吃，小程序也能跑）。
+    </p>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2><span class="tag g">B</span> 湍流丝缕：curl noise 粒子 <span class="kpi" id="kpiB">–</span></h2>
+      <div class="sub">粒子被无散度的旋度噪声场推动，拉成一条条细丝，交缠成烟</div>
+    </header>
+    <canvas id="pB" width="640" height="400"></canvas>
+    <p class="note">
+      <b>特点</b>：真正的丝状结构，会绕、会卷、会分叉；粒子沿轨迹拖尾，越细越像烟。
+      <b>成本</b>：中（几百个粒子，桌面 &lt;2ms/帧，手机需按档位减粒子）。
+    </p>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2><span class="tag b">C</span> 噪声贴图层：视差 + 侵蚀 <span class="kpi" id="kpiC">–</span></h2>
+      <div class="sub">预烘焙一张湍流贴图，多层不同速度缩放叠加，用遮罩把边缘啃碎</div>
+    </header>
+    <canvas id="pC" width="640" height="400"></canvas>
+    <p class="note">
+      <b>特点</b>：大团翻滚的体积感最强，边缘可被啃成絮状，成本却极低（三端通吃）。
+      <b>短板</b>：偏「云雾」，丝缕感不如 B。
+    </p>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2><span class="tag y">D</span> 体积渲染：GPU 光线步进 <span class="kpi" id="kpiD">–</span></h2>
+      <div class="sub">片元着色器里逐像素穿过 3D 噪声体积，累积自阴影与光轴</div>
+    </header>
+    <canvas id="pD" width="640" height="400"></canvas>
+    <p class="note">
+      <b>特点</b>：唯一能真正做出「体积光 + 自阴影 + 穿物而过」的方案，最接近电影级烟。
+      <b>代价</b>：需要 WebGL2（网页 / Android 应用可用，微信小程序不可用），移动端要按档位降步数。
+    </p>
+  </section>
+
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>方案</th><th>还原度</th><th>性能</th><th>网页</th><th>Android</th><th>小程序</th><th>工作量</th><th>取舍</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>A 团块精灵</b>（现状）</td>
+      <td>★☆☆☆☆</td><td>极省</td><td>✓</td><td>✓</td><td>✓</td><td>—</td>
+      <td>不解决问题</td>
+    </tr>
+    <tr>
+      <td><b>B 湍流丝缕</b></td>
+      <td>★★★★☆</td><td>省（&lt;2ms）</td><td>✓</td><td>✓</td><td>✓</td><td>约 1 天</td>
+      <td>三端一致，性价比最高</td>
+    </tr>
+    <tr>
+      <td><b>C 噪声贴图层</b></td>
+      <td>★★★☆☆</td><td>极省</td><td>✓</td><td>✓</td><td>✓</td><td>约半天</td>
+      <td>最稳，云雾感强</td>
+    </tr>
+    <tr>
+      <td><b>D 体积渲染</b></td>
+      <td>★★★★★</td><td>吃 GPU</td><td>✓</td><td>✓</td><td>✗ 需降级</td><td>约 2–3 天</td>
+      <td>最像效果图，但小程序要留退路</td>
+    </tr>
+    <tr>
+      <td><b>B + C 叠加</b>（推荐）</td>
+      <td>★★★★☆</td><td>省</td><td>✓</td><td>✓</td><td>✓</td><td>约 1.5 天</td>
+      <td>C 打底做体积，B 拉丝做细节</td>
+    </tr>
+    <tr>
+      <td><b>D 为主 + B/C 兜底</b></td>
+      <td>★★★★★</td><td>吃 GPU</td><td>✓</td><td>✓</td><td>降级到 C</td><td>约 3 天</td>
+      <td>最像效果图，代价是双轨实现</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="foot">
+  面板均为实时演算，非录屏。四张画布共用同一段「频谱」模拟信号（同样的低频起伏 / 高频抖动），
+  以便公平对比。<br>
+  接入项目时的落点：<code>web/js/app.js</code> 的 <code>drawGasFog()</code> 与
+  <code>updateFlows()</code>；画质档（高清 / 性能）正好用来切粒子数与步数。
+</p>
+
+<script>
+'use strict';
+
+/* ================= 公共 ================= */
+const W = 640, H = 400;
+
+function hash2(x, y) {
+  const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+  return n - Math.floor(n);
+}
+function smooth(t) { return t * t * (3 - 2 * t); }
+function vnoise(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y);
+  const xf = x - xi, yf = y - yi;
+  const u = smooth(xf), v = smooth(yf);
+  const a = hash2(xi, yi), b = hash2(xi + 1, yi), c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1);
+  return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+}
+function fbm(x, y, oct) {
+  let s = 0, amp = 0.5, f = 1;
+  for (let i = 0; i < (oct || 3); i++) { s += amp * vnoise(x * f, y * f); f *= 2.03; amp *= 0.5; }
+  return s;
+}
+/* 周期性噪声（用于可平铺贴图） */
+function pnoise(x, y, per) {
+  const xi = Math.floor(x), yi = Math.floor(y);
+  const xf = x - xi, yf = y - yi;
+  const u = smooth(xf), v = smooth(yf);
+  const wx = (n) => ((n % per) + per) % per;
+  const a = hash2(wx(xi), wx(yi)), b = hash2(wx(xi + 1), wx(yi));
+  const c = hash2(wx(xi), wx(yi + 1)), d = hash2(wx(xi + 1), wx(yi + 1));
+  return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+}
+function pfbm(x, y, per, oct) {
+  let s = 0, amp = 0.5, f = 1, p = per;
+  for (let i = 0; i < (oct || 4); i++) { s += amp * pnoise(x * f, y * f, p); f *= 2; p *= 2; amp *= 0.5; }
+  return s;
+}
+
+/* 模拟频谱：低频起伏（慢）+ 高频抖动（快），与真实播放同构 */
+function spectrum(t) {
+  const low = 0.5 + 0.5 * Math.sin(t * 0.9) * Math.sin(t * 0.37 + 1.1);
+  const high = 0.5 + 0.5 * Math.sin(t * 5.3 + 0.7) * Math.sin(t * 2.1);
+  const level = 0.45 + 0.4 * low;
+  return { low, high, level };
+}
+
+/* 暗调展厅背景 + 青铜卦象（只作参照物） */
+function drawStage(ctx, t, spec) {
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#0a1018');
+  bg.addColorStop(.55, '#070b11');
+  bg.addColorStop(1, '#03060a');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  // 地面反光
+  const fl = ctx.createLinearGradient(0, H * .58, 0, H);
+  fl.addColorStop(0, 'rgba(120,170,205,.10)');
+  fl.addColorStop(1, 'rgba(120,170,205,0)');
+  ctx.fillStyle = fl; ctx.fillRect(0, H * .58, W, H * .42);
+  // 卦象：六爻青铜块
+  const bx = W * .5, by = H * .40, bw = 62, bh = 9, gap = 15;
+  ctx.save();
+  for (let i = 0; i < 6; i++) {
+    const y = by - 2.5 * gap + i * gap;
+    const broken = (i === 1 || i === 4);
+    ctx.fillStyle = 'rgba(152,108,62,.92)';
+    if (broken) {
+      ctx.fillRect(bx - bw, y, bw * .42, bh);
+      ctx.fillRect(bx + bw * .58, y, bw * .42, bh);
+    } else {
+      ctx.fillRect(bx - bw, y, bw * 2, bh);
+    }
+    ctx.fillStyle = 'rgba(255,220,160,.16)';
+    ctx.fillRect(bx - bw, y, bw * 2, 1.6);
+  }
+  ctx.restore();
+}
+
+/* ================= A · 现状：团块精灵 ================= */
+const spriteIce = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 96;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(48, 48, 0, 48, 48, 48);
+  grd.addColorStop(0, 'rgba(168,222,255,.85)');
+  grd.addColorStop(.35, 'rgba(110,180,225,.38)');
+  grd.addColorStop(1, 'rgba(90,150,200,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 96, 96);
+  return c;
+})();
+const spriteGold = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 96;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(48, 48, 0, 48, 48, 48);
+  grd.addColorStop(0, 'rgba(255,214,150,.55)');
+  grd.addColorStop(.4, 'rgba(226,166,86,.22)');
+  grd.addColorStop(1, 'rgba(200,140,70,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 96, 96);
+  return c;
+})();
+
+function panelA(ctx, t) {
+  drawStage(ctx, t, spectrum(t));
+  const spec = spectrum(t);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const lines = 7;
+  for (let l = 0; l < lines; l++) {
+    const y0 = H * (.30 + l * .055) + Math.sin(t * .7 + l) * 9;
+    const head = (t * 90 + l * 120) % (W + 420) - 210;
+    for (let k = 0; k < 26; k++) {
+      const f = 1 - k / 26;
+      const x = head - k * 11;
+      const y = y0 + Math.sin(x * .012 + t * 1.2 + l) * (6 + spec.high * 7);
+      const size = (14 + 30 * f) * (0.8 + spec.level * .5);
+      const alpha = (0.05 + 0.14 * Math.sin(f * Math.PI)) * (0.6 + spec.level * .6);
+      ctx.globalAlpha = Math.min(1, alpha);
+      ctx.drawImage(l % 3 === 0 ? spriteGold : spriteIce, x - size / 2, y - size / 2, size, size);
+    }
+  }
+  ctx.restore();
+}
+
+/* ================= B · 湍流丝缕（curl noise 粒子） ================= */
+const partsB = [];
+const TRAIL = 7;
+function initB() {
+  partsB.length = 0;
+  for (let i = 0; i < 900; i++) partsB.push(spawnB(W * Math.random(), H * (.15 + Math.random() * .6)));
+}
+function spawnB(x, y) {
+  const p = { x, y, age: 0, life: 150 + Math.random() * 320, w: .4 + Math.random() * .8, h: [] };
+  for (let i = 0; i < TRAIL; i++) p.h.push(x, y);
+  return p;
+}
+function panelB(ctx, t) {
+  drawStage(ctx, t, spectrum(t));
+  const spec = spectrum(t);
+  const dt = 16.7;
+  const F = 0.0026, E = 2.2;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (let i = 0; i < partsB.length; i++) {
+    let p = partsB[i];
+    // 旋度噪声：无散度速度场 → 自然的卷曲与分叉（速度单位：px/帧）
+    const tOff = t * 0.0011;
+    const n0 = fbm(p.x * F, p.y * F + tOff, 3);
+    const nx = fbm((p.x + E) * F, p.y * F + tOff, 3);
+    const ny = fbm(p.x * F, (p.y + E) * F + tOff, 3);
+    let cx = (ny - n0) / E * 900;
+    let cy = -(nx - n0) / E * 900;
+    cx = Math.max(-2.2, Math.min(2.2, cx));
+    cy = Math.max(-2.2, Math.min(2.2, cy));
+    const vx = cx + (1.0 + spec.level * 1.5);          // 整体右移
+    const vy = cy - (0.12 + spec.low * 0.26);           // 轻微上浮
+    const k = dt / 16.7;
+    p.x += vx * k;
+    p.y += vy * k;
+    p.age++;
+    if (p.age > p.life || p.x > W + 70 || p.y < -50 || p.y > H + 50) {
+      p = partsB[i] = spawnB(-20 - Math.random() * 60, H * (.12 + Math.random() * .62));
+    }
+    // 拖尾：把最近若干位置连成丝
+    p.h.push(p.x, p.y);
+    if (p.h.length > TRAIL * 2) p.h.splice(0, 2);
+    const fade = Math.min(1, p.age / 30) * Math.min(1, (p.life - p.age) / 60);
+    const near = 1 - Math.min(1, Math.abs(p.y - H * .40) / (H * .55));
+    const gold = Math.max(0, near - .40) * 1.7;
+    const r = Math.round(112 + gold * 140), g2 = Math.round(196 - gold * 6), b = Math.round(238 - gold * 128);
+    const a = (0.035 + .10 * fade) * p.w * (0.55 + spec.level * .75);
+    // 两遍：先描一遍宽而淡的当辉光，再描一遍细而亮的当丝
+    for (let pass = 0; pass < 2; pass++) {
+      ctx.strokeStyle = `rgba(${r},${g2},${b},${pass ? a : a * 0.22})`;
+      ctx.lineWidth = pass ? (0.6 + p.w * 1.8 * (0.5 + spec.high * 0.9)) : (2.2 + p.w * 5.5);
+      ctx.beginPath();
+      ctx.moveTo(p.h[0], p.h[1]);
+      for (let k = 2; k < p.h.length; k += 2) ctx.lineTo(p.h[k], p.h[k + 1]);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+/* ================= C · 噪声贴图层 ================= */
+const TEX = 256;
+const tex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = TEX;
+  const g = c.getContext('2d');
+  const img = g.createImageData(TEX, TEX);
+  const per = 6;
+  for (let y = 0; y < TEX; y++) {
+    for (let x = 0; x < TEX; x++) {
+      // 湍流感：两个尺度相乘，得到「丝 + 团」的结构
+      const n = pfbm(x / TEX * per, y / TEX * per, per, 4);
+      const m = pfbm(x / TEX * per * 2.7 + 13, y / TEX * per * 2.7 + 7, per * 2.7, 3);
+      let v = (n * 1.15) * (0.35 + 0.9 * m);
+      v = Math.max(0, Math.min(1, (v - 0.16) * 2.3));
+      const i = (y * TEX + x) * 4;
+      img.data[i] = 255; img.data[i + 1] = 255; img.data[i + 2] = 255;
+      img.data[i + 3] = Math.round(v * 255);   // 噪声写在 alpha 里，才好被上色/打洞
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+})();
+const tmpC = document.createElement('canvas'); tmpC.width = W; tmpC.height = H;
+
+function panelC(ctx, t) {
+  drawStage(ctx, t, spectrum(t));
+  const spec = spectrum(t);
+  const LAYERS = 5;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let L = 0; L < LAYERS; L++) {
+    const g2 = tmpC.getContext('2d');
+    g2.clearRect(0, 0, W, H);
+    const sc = 1.15 + L * 0.34;
+    const spd = (10 + L * 18) * (0.6 + spec.level * 0.8);
+    const tile = TEX * sc;
+    const ox = -((t * spd) % tile) + L * 40;
+    const oy = Math.sin(t * .32 + L * 1.3) * 30 - L * 10;
+    g2.globalAlpha = 1;
+    g2.globalCompositeOperation = 'source-over';
+    for (let ix = 0; ix <= Math.ceil(W / tile); ix++) {
+      for (let iy = 0; iy <= Math.ceil(H / tile); iy++) {
+        g2.drawImage(tex, ox + ix * tile, oy + iy * tile, tile, tile);
+      }
+    }
+    // 上色：冰蓝 → 暖金（alpha 来自噪声）
+    g2.globalCompositeOperation = 'source-in';
+    const cg = g2.createLinearGradient(0, H * .05, 0, H * .95);
+    cg.addColorStop(0, 'rgba(150,208,245,.88)');
+    cg.addColorStop(.45, 'rgba(104,168,214,.72)');
+    cg.addColorStop(1, 'rgba(240,186,108,.62)');
+    g2.fillStyle = cg; g2.fillRect(0, 0, W, H);
+    // 边缘遮罩：把轮廓啃碎
+    g2.globalCompositeOperation = 'destination-in';
+    const mg = g2.createRadialGradient(W * .5, H * .48, W * .08, W * .5, H * .5, W * .58);
+    mg.addColorStop(0, 'rgba(0,0,0,1)');
+    mg.addColorStop(.65, 'rgba(0,0,0,.72)');
+    mg.addColorStop(1, 'rgba(0,0,0,0)');
+    g2.fillStyle = mg; g2.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 0.30 + 0.12 * spec.low;
+    ctx.drawImage(tmpC, 0, 0);
+  }
+  ctx.restore();
+}
+
+/* ================= D · 体积渲染（WebGL2） ================= */
+const VS = `#version 300 es
+void main(){
+  vec2 p = vec2((gl_VertexID<<1)&2, gl_VertexID&2);
+  gl_Position = vec4(p*2.0-1.0, 0.0, 1.0);
+}`;
+const FS = `#version 300 es
+precision highp float;
+uniform vec2 uRes; uniform float uTime; uniform float uLevel; uniform float uHigh;
+out vec4 frag;
+float hash(vec3 p){
+  p = fract(p*0.3183099 + vec3(0.71,0.113,0.419));
+  p *= 17.0;
+  return fract(p.x*p.y*p.z*(p.x+p.y+p.z));
+}
+float noise(vec3 x){
+  vec3 i = floor(x), f = fract(x);
+  f = f*f*(3.0-2.0*f);
+  return mix(mix(mix(hash(i+vec3(0,0,0)), hash(i+vec3(1,0,0)), f.x),
+                 mix(hash(i+vec3(0,1,0)), hash(i+vec3(1,1,0)), f.x), f.y),
+             mix(mix(hash(i+vec3(0,0,1)), hash(i+vec3(1,0,1)), f.x),
+                 mix(hash(i+vec3(0,1,1)), hash(i+vec3(1,1,1)), f.x), f.y), f.z);
+}
+float fbm(vec3 p){
+  float s = 0.0, a = 0.5;
+  for(int i=0;i<4;i++){ s += a*noise(p); p *= 2.03; a *= 0.5; }
+  return s;
+}
+void main(){
+  vec2 uv = (gl_FragCoord.xy - 0.5*uRes)/uRes.y;
+  vec3 ro = vec3(0.0, 0.0, -2.0);
+  vec3 rd = normalize(vec3(uv, 1.35));
+  float t = uTime*0.10;
+  // 卦象（当作遮挡体）：射线与盒子求交
+  vec3 bmin = vec3(-0.42,-0.30,-0.05), bmax = vec3(0.42,0.30,0.05);
+  vec3 inv = 1.0/rd;
+  vec3 t0 = (bmin-ro)*inv, t1 = (bmax-ro)*inv;
+  vec3 tmin = min(t0,t1), tmax = max(t0,t1);
+  float tNear = max(max(tmin.x,tmin.y),tmin.z);
+  float tFar  = min(min(tmax.x,tmax.y),tmax.z);
+  float tHit = (tFar > max(tNear,0.0)) ? tNear : 1e9;
+  vec3 L = normalize(vec3(-0.45,0.78,0.42));
+  float acc = 0.0;
+  vec3 col = vec3(0.0);
+  float dt = 0.072;
+  for(int i=0;i<30;i++){
+    float fi = float(i);
+    if(fi*dt > tHit) break;
+    vec3 p = ro + rd*fi*dt;
+    p.x += sin(p.y*2.4 + uTime*0.6)*0.16*(0.4+uHigh);
+    p.y += cos(p.x*2.1 - uTime*0.5)*0.10;
+    float d = fbm(p*1.55 + vec3(0.0,0.0,t));
+    d = smoothstep(0.36, 0.82, d);
+    float sh = fbm((p + L*0.28)*1.55 + vec3(0.0,0.0,t));
+    d *= 0.26 + 0.74*smoothstep(0.30, 0.86, sh);
+    // 靠近卦象 / 光源的部分偏暖金，远处偏冰蓝
+    float warm = clamp(1.0 - length(p.xy*vec2(1.25,1.0))*1.05, 0.0, 1.0);
+    vec3 c = mix(vec3(0.34,0.62,0.88), vec3(1.0,0.76,0.42), warm*0.9);
+    // 顺光方向更强 → 体积光轴
+    float shaft = pow(clamp(dot(rd, L), 0.0, 1.0), 3.0)*0.9 + 0.25;
+    float a = d*dt*(2.1+uLevel*1.5)*shaft;
+    col += c*a;
+    acc += a;
+  }
+  col = col/(1.0+acc*0.30)*1.12;
+  // 卦象本体（青铜）
+  if(tHit < 1e8){
+    vec3 p = ro + rd*tHit;
+    float bar = step(abs(p.y-0.20),0.030) + step(abs(p.y-0.12),0.030) + step(abs(p.y-0.04),0.030)
+              + step(abs(p.y+0.04),0.030) + step(abs(p.y+0.12),0.030) + step(abs(p.y+0.20),0.030);
+    if(bar > 0.5 && abs(p.x) < 0.42){
+      vec3 metal = vec3(0.60,0.42,0.22)*(0.55+0.45*shade(p));
+      col = mix(col, metal, 0.92);
+    }
+  }
+  col += vec3(0.012,0.016,0.024);
+  frag = vec4(col, 1.0);
+}
+float shade(vec3 p){ return 0.5+0.5*sin(p.x*9.0+p.y*6.0); }
+`;
+
+/* 需要 shade() 在 main 之前声明 —— 用简单版重写着色器 */
+const FS2 = FS.replace('float shade(vec3 p){ return 0.5+0.5*sin(p.x*9.0+p.y*6.0); }\n', '')
+  .replace('out vec4 frag;', 'out vec4 frag;\nfloat shade(vec3 p){ return 0.5+0.5*sin(p.x*9.0+p.y*6.0); }');
+
+function initD(canvas) {
+  const gl = canvas.getContext('webgl2', { antialias: false, alpha: false });
+  if (!gl) return null;
+  function shader(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      console.error(gl.getShaderInfoLog(s)); return null;
+    }
+    return s;
+  }
+  const vs = shader(gl.VERTEX_SHADER, VS), fs = shader(gl.FRAGMENT_SHADER, FS2);
+  if (!vs || !fs) return null;
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { console.error(gl.getProgramInfoLog(prog)); return null; }
+  gl.useProgram(prog);
+  const uRes = gl.getUniformLocation(prog, 'uRes');
+  const uTime = gl.getUniformLocation(prog, 'uTime');
+  const uLevel = gl.getUniformLocation(prog, 'uLevel');
+  const uHigh = gl.getUniformLocation(prog, 'uHigh');
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  return { gl, uRes, uTime, uLevel, uHigh };
+}
+
+function panelD(ctx, t, D) {
+  if (!D) return;
+  const { gl, uRes, uTime, uLevel, uHigh } = D;
+  const spec = spectrum(t);
+  gl.viewport(0, 0, W, H);
+  gl.uniform2f(uRes, W, H);
+  gl.uniform1f(uTime, t);
+  gl.uniform1f(uLevel, spec.level);
+  gl.uniform1f(uHigh, spec.high);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+/* ================= 主循环 ================= */
+initB();
+const cvs = {
+  A: document.getElementById('pA'), B: document.getElementById('pB'),
+  C: document.getElementById('pC'), D: document.getElementById('pD')
+};
+const ctxs = {
+  A: cvs.A.getContext('2d'), B: cvs.B.getContext('2d'), C: cvs.C.getContext('2d')
+};
+const D = initD(cvs.D);
+if (!D) {
+  const g2 = cvs.D.getContext('2d');
+  g2.fillStyle = '#0a0e14'; g2.fillRect(0, 0, W, H);
+  g2.fillStyle = 'rgba(220,225,235,.75)';
+  g2.font = '15px "PingFang SC", "Microsoft YaHei", sans-serif';
+  g2.textAlign = 'center';
+  g2.fillText('此环境不支持 WebGL2 —— 体积渲染方案需要它', W / 2, H / 2 - 8);
+  g2.fillStyle = 'rgba(220,225,235,.5)';
+  g2.font = '13px "PingFang SC", sans-serif';
+  g2.fillText('（网页 / Android 应用可用；微信小程序需降级到方案 C）', W / 2, H / 2 + 18);
+}
+
+const kpis = { A: document.getElementById('kpiA'), B: document.getElementById('kpiB'), C: document.getElementById('kpiC'), D: document.getElementById('kpiD') };
+let labT = 0;          // 动画时间基准（毫秒）
+let frames = 0, accA = 0, accB = 0, accC = 0, accD = 0;
+
+function frame(dt) {
+  labT += dt;
+  const t = labT;
+  let s = performance.now();
+  panelA(ctxs.A, t); accA += performance.now() - s;
+  s = performance.now();
+  panelB(ctxs.B, t); accB += performance.now() - s;
+  s = performance.now();
+  panelC(ctxs.C, t); accC += performance.now() - s;
+  if (D && !window.__labNoD) {
+    s = performance.now();
+    panelD(ctxs.D, t, D);
+    accD += performance.now() - s;
+  }
+  frames++;
+  if (frames % 30 === 0) {
+    kpis.A.textContent = (accA / 30).toFixed(2) + ' ms/帧';
+    kpis.B.textContent = (accB / 30).toFixed(2) + ' ms/帧';
+    kpis.C.textContent = (accC / 30).toFixed(2) + ' ms/帧';
+    kpis.D.textContent = D ? (accD / 30).toFixed(2) + ' ms/帧' : 'WebGL2 不可用';
+    accA = accB = accC = accD = 0;
+  }
+}
+let lastNow = performance.now();
+function tick(now) {
+  const dt = Math.min(50, now - lastNow);
+  lastNow = now;
+  frame(dt);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+/* 自检钩子：无头环境下 rAF 可能被节流，可用此接口手动推进 */
+window.__labStep = (n) => { for (let i = 0; i < (n || 1); i++) frame(16.7); };
+window.__dbgParts = () => partsB.slice(0, 3).map(p => ({ x: +p.x.toFixed(1), y: +p.y.toFixed(1), h: p.h.length, h0: +p.h[0].toFixed(1), h1: +p.h[1].toFixed(1), last: +p.h[p.h.length - 2].toFixed(1), lastY: +p.h[p.h.length - 1].toFixed(1) }));
+</script>
+</body>
+</html>

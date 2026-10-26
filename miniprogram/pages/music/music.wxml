@@ -36,6 +36,7 @@
         <view class="live-dot"></view>
         <text class="live-txt">{{liveText}}</text>
       </view>
+      <text class="ch-note" wx:if="{{isPlaying}}">{{playerTime}}</text>
     </view>
 
     <!-- 波形台：始终渲染（不放在 wx:if 里）——

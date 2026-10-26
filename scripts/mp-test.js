@@ -100,21 +100,33 @@ const wx = {
     }
   }),
 
-  // 音频
+  // 音频（记录回调，便于测试播放链路）
   createInnerAudioContext: () => {
     const ctx = {
       autoplay: false, obeyMuteSwitch: false, volume: 1,
       currentTime: 0, duration: 0, src: '',
-      onTimeUpdate: () => {}, onEnded: () => {}, onError: () => {},
-      play: () => { ctx.playing = true; },
+      _cb: { time: null, ended: null, error: null },
+      onTimeUpdate: (f) => { ctx._cb.time = f; },
+      onEnded: (f) => { ctx._cb.ended = f; },
+      onError: (f) => { ctx._cb.error = f; },
+      play: () => { ctx.playing = true; audioContexts.push(ctx); },
       pause: () => { ctx.playing = false; },
       stop: () => { ctx.playing = false; ctx.currentTime = 0; },
       seek: (t) => { ctx.currentTime = t; },
       destroy: () => {}
     };
     return ctx;
+  },
+
+  // 实时合成降级方案（小程序专用 API）
+  createWebAudioContext: () => {
+    if (wx._noWebAudio) return null;
+    throw new Error('本测试不覆盖 wx.createWebAudioContext 降级路径');
   }
 };
+
+/** 所有创建过的 InnerAudioContext（供播放链路测试） */
+const audioContexts = [];
 
 /* ===============================================================
  * 二、模拟 Page / App / getApp / getCurrentPages
@@ -436,6 +448,9 @@ assert(st.stats().flowMode === 'drain', '状态机：drain');
   assert(calls.gradient > 20, `小程序式环境：渐变已用（${calls.gradient} 处）`);
   assert(s2.intro >= 0.99, `小程序式环境：渐入完成 ${s2.intro.toFixed(2)}`);
 }
+
+/* 小程序端的播放链路校验另见 scripts/verify-mini-audio.js
+ * （那一段需等即兴连播首轮编完，走 Promise，单独成脚本更可靠）。 */
 
 console.log('\n【11】导航补充');
 navCalls.length = 0;

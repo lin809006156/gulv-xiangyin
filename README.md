@@ -179,6 +179,7 @@ cd android && ./gradlew assembleDebug
 | `verify-render.js` | 渲染器 | 全通过 |
 | `test.js` / `test-recognize.js` | 核心与物象归一 | 全通过 |
 | `verify-stage.js` | 波形台共享核心：在「小程序式」环境（无 AnalyserNode）下渲染校验 | 7 项 |
+| `verify-mini-audio.js` | 小程序播放链路：写盘 + InnerAudioContext，不得触碰 Web Audio | 11 项 |
 | `mp-test.js` | 小程序运行时模拟 | 77 项 |
 | `e2e.js` | 真实浏览器 + 真实出声：交互、渲染、方向、动效 | 156 项 |
 

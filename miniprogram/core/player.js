@@ -31,13 +31,20 @@ const renderScore = bootstrap.loadRender().renderScore;
 const encodeWav = bootstrap.loadRender().encodeWav;
 const audioFingerprint = bootstrap.loadRender().audioFingerprint;
 
-/** 探测运行环境 */
-const IS_NODE = (typeof process !== 'undefined' &&
-  process.versions && process.versions.node &&
-  typeof window === 'undefined');
-const IS_MINIPROGRAM = !IS_NODE &&
-  typeof wx !== 'undefined' &&
-  typeof wx.getSystemInfoSync === 'function';
+/** 探测运行环境
+ *  ---------------------------------------------------------------
+ * 判定顺序：**先看 wx**（小程序），再看 Node。
+ * 理由 —— 小程序运行时虽无 process，但有些宿主（开发者工具的自动化测试、
+ * 某些 uni-app 转译产物）会注入 process；若先判 Node 就会误判成 Node
+ * 而走错分支（如去建 Web Audio 上下文，于是小程序端直接报
+ * 「当前环境不支持 Web Audio API」）。故只要能认到 wx，就一律按小程序处理。 */
+const HAS_WX = (typeof wx !== 'undefined' &&
+  typeof wx.getSystemInfoSync === 'function');
+const IS_MINIPROGRAM = HAS_WX;
+const IS_NODE = !HAS_WX &&
+  (typeof process !== 'undefined' &&
+   process.versions && process.versions.node &&
+   typeof window === 'undefined');
 
 /**
  * 是否可以走「实时音层总线」
@@ -453,13 +460,18 @@ class Player {
       return;
     }
 
-    try {
-      this._ensureCtx();
-    } catch (e) {
-      if (this.onError) this.onError(e.message);
-      return;
+    /* 浏览器端需要真实的 Web Audio 上下文（用于精确调度与实时音层总线）；
+     * 小程序端没有 Web Audio —— 它走「写 WAV 落盘 + InnerAudioContext 播放」，
+     * 不能碰 _ensureCtx()，否则会抛「当前环境不支持 Web Audio API」。 */
+    if (!IS_MINIPROGRAM) {
+      try {
+        this._ensureCtx();
+      } catch (e) {
+        if (this.onError) this.onError(e.message);
+        return;
+      }
+      if (this._ctx.state === 'suspended') this._ctx.resume();
     }
-    if (this._ctx.state === 'suspended') this._ctx.resume();
 
     // 音层配置：新接口 ambient 优先；旧接口（solfeggio 数字）折算进来，
     // 保证既有调用方（测试、小程序）行为不变。
@@ -700,6 +712,11 @@ class Player {
         const inner = wx.createInnerAudioContext();
         this._inner = inner;
         inner.obeyMuteSwitch = false;
+        // 进度上报（播放条的时间显示）
+        inner.onTimeUpdate(() => {
+          if (!this.current) return;
+          if (this.onProgress) this.onProgress(inner.currentTime, this.current.duration);
+        });
         inner.onEnded(() => {
           if (g.playing && this._gen === g) {
             let next;
@@ -714,6 +731,12 @@ class Player {
         inner.src = filePath;
         inner.play();
         this.isPlaying = true;
+        /* 记录当前轮：genPos（波形台取频谱用）需要知道正在放哪一轮。
+         * 小程序端没有 Web Audio 的调度时间轴，故用 inner.currentTime 计时，
+         * startAt 记 0（表示 elapsed 直接取 inner 的播放位置）。 */
+        g.rounds.push(Object.assign({}, round, { startAt: 0, endAt: round.pcm.duration }));
+        // 只保留最近几轮，避免长时间播放时 rounds 无限增长
+        while (g.rounds.length > 4) g.rounds.shift();
         if (this.onStateChange) this.onStateChange('playing');
       },
       fail: (err) => {
@@ -1333,13 +1356,25 @@ class Player {
   get genPos() {
     const g = this._gen;
     if (!g || !g.rounds || !g.rounds.length) return null;
-    const now = this._ctx ? this._ctx.currentTime : 0;
+    /* 时间基准：
+     *   浏览器 —— Web Audio 的 currentTime
+     *   小程序 —— InnerAudioContext 的 currentTime（没有 Web Audio）
+     * 两者都取不到时退回 0（elapsed 恒为 0，仅作兜底）。 */
+    let now = 0;
+    if (this._ctx) now = this._ctx.currentTime;
+    else if (this._inner && typeof this._inner.currentTime === 'number') {
+      now = this._inner.currentTime;
+    }
     const r = g.rounds.find((x) => now >= x.startAt && now < x.endAt)
       || g.rounds[g.rounds.length - 1];
     if (!r) return null;
+    // 小程序端的轮次没有 Web Audio 调度时间轴，用轮次自身的播放起点推算
+    const startAt = (typeof r.startAt === 'number' && this._ctx) ? r.startAt : 0;
+    const elapsed = startAt ? Math.max(0, Math.min(r.pcm.duration, now - startAt))
+      : Math.max(0, Math.min(r.pcm.duration, now));
     return {
       round: r.round,
-      elapsed: Math.max(0, Math.min(r.pcm.duration, now - r.startAt)),
+      elapsed,
       duration: r.pcm.duration,
       score: r.score,
       arcName: r.arcName || null

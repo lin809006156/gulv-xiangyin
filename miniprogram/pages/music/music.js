@@ -13,6 +13,7 @@ const M = require('../../core/music.js');
 const D = require('../../core/data.js');
 const store = require('../../utils/storage.js');
 const Viz = require('../../core/viz-stage.js');
+const { fmtTime } = require('../../core/player.js');
 
 const app = getApp();
 const mini = require('../../utils/miniplayer.js');
@@ -62,6 +63,7 @@ Page({
     volume: 85,
     liveText: '即兴中',
     playerTip: '',
+    playerTime: '00:00 / 00:00',
     playingKey: '',
     // 浮动播放条
     mini: { isPlaying: false, paused: false, loopOn: false, title: '心音', subtitle: '即兴中' }
@@ -338,6 +340,11 @@ Page({
 
   goCast() {
     wx.switchTab({ url: '/pages/index/index' });
+  },
+
+  /** 播放进度（小程序端由 InnerAudioContext 上报） */
+  onPlayerProgress(elapsed, duration) {
+    this.setData({ playerTime: fmtTime(elapsed) + ' / ' + fmtTime(duration) });
   },
 
   onPlayerState(state, progress) {

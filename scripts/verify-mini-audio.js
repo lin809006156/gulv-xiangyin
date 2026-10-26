@@ -144,6 +144,34 @@ function loadAsMiniprogram(relPath) {
     assert(mx > 0, `端到端：波形台频谱有能量（峰值 ${mx.toFixed(2)}）`);
   }
 
+  /* ⑤ 暂停 / 继续 —— 小程序端走 InnerAudioContext，不能依赖 Web Audio 的 _ctx */
+  {
+    const inner = audioContexts[audioContexts.length - 1];
+    assert(!!inner, '暂停测试：有 InnerAudioContext 可操作');
+    let innerPaused = false;
+    let innerPlayed = false;
+    if (inner) {
+      const origPause = inner.pause.bind(inner);
+      const origPlay = inner.play.bind(inner);
+      inner.pause = () => { innerPaused = true; origPause(); };
+      inner.play = () => { innerPlayed = true; origPlay(); };
+    }
+    const states = [];
+    pl.onStateChange = (s) => states.push(s);
+
+    const okPause = pl.pause();
+    assert(okPause === true, '暂停：返回成功（小程序端不依赖 Web Audio 上下文）');
+    assert(innerPaused === true, '暂停：调用了 InnerAudioContext.pause()');
+    assert(pl.paused === true, '暂停：paused 标记已置');
+    assert(states.indexOf('paused') >= 0, '暂停：发出了 paused 状态事件');
+
+    const okResume = pl.resume();
+    assert(okResume === true, '继续：返回成功');
+    assert(innerPlayed === true, '继续：调用了 InnerAudioContext.play()');
+    assert(pl.paused === false, '继续：paused 标记已清');
+    assert(states.indexOf('playing') >= 0, '继续：发出了 playing 状态事件');
+  }
+
   pl.stop();
 
   console.log('\n' + '='.repeat(46));

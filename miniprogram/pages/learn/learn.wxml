@@ -207,5 +207,6 @@
     </view>
   </view>
 
-  <view class="page-pad"></view>
+    <template is="miniplayer" data="{{m: mini}}" />
+  <view class="page-pad {{isPlaying ? 'has-mini' : ''}}"></view>
 </view>

@@ -53,6 +53,7 @@ function buildAuditionScore(voice) {
 Page({
   ...mini.methods,
   data: {
+    ...mini.data,
     hasResult: false,
     symbol: '', name: '', structure: '', virtue: '',
     musicParams: [],
@@ -64,9 +65,7 @@ Page({
     liveText: '即兴中',
     playerTip: '',
     playerTime: '00:00 / 00:00',
-    playingKey: '',
-    // 浮动播放条
-    mini: { isPlaying: false, paused: false, loopOn: false, title: '心音', subtitle: '即兴中' }
+    playingKey: ''
   },
 
   onLoad() {
@@ -88,8 +87,12 @@ Page({
       this.getTabBar().setSelected(1);
     }
     this.syncResult();
-    this.initCanvas();
     this.restoreVolume();
+    /* 画布与绘制循环：
+     *   切走时（onHide）循环已停，回到本页必须重启 —— 否则波形台一片空白。
+     *   画布节点可能被系统回收，故每次 onShow 都重新取一次节点。 */
+    this.canvas = null;          // 强制重取节点
+    this.initCanvas();
   },
 
   onHide() { this.stopLoop(); },
@@ -187,12 +190,25 @@ Page({
       const canvas = res[0].node;
       const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
       const dpr = info.pixelRatio || 2;
+      /* 画布的 CSS 尺寸。
+       * 若取到 0（真机上偶发：节点已存在但尚未完成布局），
+       * 则用兜底值并重试一次 —— 尺寸为 0 的画布画出来就是一片空白。 */
+      let cssW = Math.round(res[0].width || 0);
+      let cssH = Math.round(res[0].height || 0);
+      if (cssW < 10 || cssH < 10) {
+        if (tries < 10) { setTimeout(() => this.initCanvas(tries + 1), 120); return; }
+        const winW = (info.windowWidth || 375);
+        cssW = Math.max(240, winW - 96);   // 页面左右留白 + 卡片内边距的估计
+        cssH = 150;
+      }
       // 画布的物理像素 = CSS 像素 × dpr
-      const cssW = res[0].width || 320;
-      const cssH = res[0].height || 150;
       canvas.width = Math.round(cssW * dpr);
       canvas.height = Math.round(cssH * dpr);
       const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        if (tries < 10) { setTimeout(() => this.initCanvas(tries + 1), 120); return; }
+        return;
+      }
       // 坐标系缩放到 CSS 像素，故共享渲染核心里的坐标一律用 CSS 像素
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       this.canvas = canvas;
@@ -272,12 +288,21 @@ Page({
     const result = app.globalData.currentResult;
     if (!p || !result) return;
     if (p.isPlaying) {
-      if (p.paused) { p.resume(); app.setUi({ paused: false, isPlaying: true, subtitle: '即兴中' }); }
-      else { p.pause(); app.setUi({ paused: true, isPlaying: true, subtitle: '已暂停' }); }
+      if (p.paused) {
+        if (p.resume()) app.setUi({ paused: false, subtitle: '即兴中' });
+        else wx.showToast({ title: '继续失败', icon: 'none' });
+      } else {
+        if (p.pause()) app.setUi({ paused: true, subtitle: '已暂停' });
+        else wx.showToast({ title: '暂停失败', icon: 'none' });
+      }
       this.setData({ isPlaying: p.isPlaying, paused: p.paused });
       return;
     }
     // 起播：即兴连播（与网页版同一引擎）
+    // 注意：此刻**不要**把 UI 标成「正在播放」——
+    //   小程序端要先编曲 + 写盘（约一两秒）才真正出声，
+    //   若立即显示暂停键，用户此时点它会毫无反应（还没出声可暂停）。
+    //   UI 状态改由引擎的 'playing' 事件驱动（app.js 的 onStateChange）。
     this.setData({ playerTip: '正在编曲：第一段即兴…' });
     p.playGenerative(result.hex, result.music, result.changedMusic, {
       onChange: (info) => {
@@ -285,8 +310,8 @@ Page({
         this.setData({ liveText: (names[info.section] || '奏') + ' · 即兴中' });
       }
     });
-    app.setUi({ isPlaying: true, paused: false, subtitle: '即兴中' });
-    this.setData({ isPlaying: true, paused: false, playerTip: '即兴连播中：八段一循环，同一动机逐段生长。' });
+    app.setUi({ subtitle: '即兴中' });
+    this.setData({ playerTip: '即兴连播中：八段一循环，同一动机逐段生长。' });
   },
 
   toggleLoop() {

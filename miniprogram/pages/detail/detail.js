@@ -17,6 +17,7 @@ const mini = require('../../utils/miniplayer.js');
 Page({
   ...mini.methods,
   data: {
+    ...mini.data,
     hasResult: false,
     symbol: '',
     name: '',

@@ -18,6 +18,7 @@ const mini = require('../../utils/miniplayer.js');
 Page({
   ...mini.methods,
   data: {
+    ...mini.data,
     // 起卦方式
     mode: 'daily',
     modes: [

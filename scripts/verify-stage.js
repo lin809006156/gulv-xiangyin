@@ -105,6 +105,59 @@ const path = require('path');
         { time: 0.2, dur: 1.0, midi: 64, vel: 0.7 },
         { time: 0.5, dur: 1.0, midi: 67, vel: 0.6 }
       ] };
+      // ② 真机尺寸模拟：竖屏手机（375×667），卡片内画布约 299×150
+      {
+        const wReal = 299, hReal = 150, dprReal = 3;
+        const cvReal = document.createElement('canvas');
+        cvReal.width = wReal * dprReal; cvReal.height = hReal * dprReal;
+        const cxReal = cvReal.getContext('2d');
+        cxReal.setTransform(dprReal, 0, 0, dprReal, 0, 0);
+        const stR = Viz.createStage();
+        stR.attach(cxReal, wReal, hReal);
+        stR.setHex([1,0,1,0,1,0], []);
+        stR.setFlowState('idle');          // 未播放：也应有场景（展厅 + 卦体）
+        stR.draw(cxReal, 1/60);
+        const dR = cxReal.getImageData(0, 0, wReal * dprReal, hReal * dprReal).data;
+        let neR = 0, warmR = 0, sampR = 0;
+        for (let i = 0; i < dR.length; i += 4 * 17) {
+          sampR++;
+          if (dR[i] + dR[i+1] + dR[i+2] > 40) neR++;
+          if (dR[i] > dR[i+2] + 25) warmR++;
+        }
+        out.realSizeNonEmpty = neR;
+        out.realSizeWarm = warmR;
+        out.realSizeSampled = sampR;
+      }
+
+      // ③ 降级路径：模拟旧基础库（没有 ctx.ellipse）——此时也不能报错
+      {
+        const ctxOld = canvas.getContext('2d');
+        const savedEllipse = ctxOld.ellipse;
+        try {
+          delete ctxOld.ellipse;
+          const st3 = Viz.createStage();
+          st3.attach(ctxOld, W, H);
+          st3.setHex([1,0,1,0,1,0], []);
+          st3.setFlowState('playing');
+          let err2 = null;
+          try {
+            for (let i = 0; i < 30; i++) {
+              st3.setSignal({ bins: Viz.spectrumFromScore(score, 0.5, 64) });
+              st3.draw(ctxOld, 1/60);
+            }
+          } catch (e) { err2 = String(e && e.message ? e.message : e); }
+          out.noEllipseError = err2;
+          out.noEllipseParts = st3.stats().n;
+          // 画布仍有内容？
+          const d2 = ctxOld.getImageData(0, 0, W * DPR, H * DPR).data;
+          let ne2 = 0;
+          for (let i = 0; i < d2.length; i += 4 * 41) if (d2[i] + d2[i+1] + d2[i+2] > 30) ne2++;
+          out.noEllipseNonEmpty = ne2;
+        } finally {
+          if (savedEllipse) ctxOld.ellipse = savedEllipse;
+        }
+      }
+
       const bins = Viz.spectrumFromScore(score, 0.5, 64);
       let mx = 0; for (let i = 0; i < bins.length; i++) if (bins[i] > mx) mx = bins[i];
       out.specMax = +mx.toFixed(3);
@@ -157,6 +210,10 @@ const path = require('path');
     if (v.stats && v.stats.intro >= 0.99) ok('渐入完成 ' + v.stats.intro.toFixed(2)); else bad('渐入未完成');
     if (v.nonEmpty > v.sampled * 0.5) ok('画面非空 ' + v.nonEmpty + '/' + v.sampled); else bad('画面近乎空白');
     if (v.warmRow > v.warmSampled * 0.05) ok('卦体区有金属暖色像素 ' + v.warmRow + '/' + v.warmSampled); else bad('卦体区无暖色像素：' + v.warmRow + '/' + v.warmSampled);
+    if (!v.noEllipseError) ok('旧基础库（无 ctx.ellipse）：不报错'); else bad('旧基础库降级路径报错：' + v.noEllipseError);
+    if (v.realSizeNonEmpty > v.realSizeSampled * 0.5) ok('真机尺寸（299×150 @3x）：未播放时也有画面 ' + v.realSizeNonEmpty + '/' + v.realSizeSampled); else bad('真机尺寸画面近乎空白：' + v.realSizeNonEmpty + '/' + v.realSizeSampled);
+    if (v.realSizeWarm > 100) ok('真机尺寸：卦体金属暖色可见 ' + v.realSizeWarm); else bad('真机尺寸卦体不可见');
+    if (v.noEllipseNonEmpty > 100) ok('旧基础库降级路径：画面仍有内容 ' + v.noEllipseNonEmpty); else bad('旧基础库降级路径画面空白');
   }
   srv.close();
   try { browser.kill(); } catch (e) {}

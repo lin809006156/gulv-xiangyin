@@ -1,5 +1,5 @@
 <template name="miniplayer">
-  <view class="miniplayer" wx:if="{{m.isPlaying}}">
+  <view class="miniplayer {{nobar ? 'nobar' : ''}}" wx:if="{{m.isPlaying}}">
     <view class="mp-wave">
       <view class="w1"></view><view class="w2"></view><view class="w3"></view><view class="w4"></view>
     </view>

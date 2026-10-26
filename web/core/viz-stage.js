@@ -83,6 +83,31 @@ function fbm(x, y, oct) {
 }
 
 /**
+ * 椭圆路径
+ * ---------------------------------------------------------------
+ * 优先用 ctx.ellipse；旧基础库没有该方法时，
+ * 用「缩放 + 圆弧」等价实现（save/scale/arc/restore）。
+ * 一旦这里抛错，整帧绘制中断 —— 画面就是一片空白。
+ */
+function ellipsePath(ctx, cx, cy, rx, ry, rot, a0, a1, ccw) {
+  if (typeof ctx.ellipse === 'function') {
+    ctx.ellipse(cx, cy, rx, ry, rot || 0, a0, a1, !!ccw);
+    return;
+  }
+  /* 降级实现：绕圆心做「缩放 + 旋转」，再用圆弧画。
+   * 注意**不能**用 save/restore 包住 —— 那会把调用方已经 beginPath()
+   * 建立的路径一并丢弃，图形就画不出来了。
+   * 故这里只变换坐标系，路径仍在同一坐标系下累积。 */
+  ctx.save();
+  ctx.translate(cx, cy);
+  if (rot) ctx.rotate(rot);
+  ctx.scale(1, ry / rx);
+  // 在变换后的坐标系里画圆弧：圆心回到原点、半径为 rx
+  ctx.arc(0, 0, rx, a0, a1, !!ccw);
+  ctx.restore();
+}
+
+/**
  * 圆角矩形路径（用 arcTo 实现，不依赖 ctx.roundRect —— 小程序未必有）
  */
 function roundRectPath(ctx, x, y, w, h, r) {
@@ -404,7 +429,7 @@ function createStage(options) {
     ctx2.beginPath();
     ctx2.moveTo(geo.cx - rx, y);
     ctx2.lineTo(geo.cx - rx, y + ph);
-    ctx2.ellipse(geo.cx, y + ph, rx, ry, 0, Math.PI, 0, true);
+    ellipsePath(ctx2, geo.cx, y + ph, rx, ry, 0, Math.PI, 0, true);
     ctx2.lineTo(geo.cx + rx, y);
     ctx2.closePath();
     ctx2.fill();
@@ -416,20 +441,20 @@ function createStage(options) {
     top.addColorStop(1, 'rgba(56,63,74,.96)');
     ctx2.fillStyle = top;
     ctx2.beginPath();
-    ctx2.ellipse(geo.cx, y, rx, ry, 0, 0, Math.PI * 2);
+    ellipsePath(ctx2, geo.cx, y, rx, ry, 0, 0, Math.PI * 2);
     ctx2.fill();
     // 顶面高光环
     ctx2.strokeStyle = 'rgba(206,220,238,.26)';
     ctx2.lineWidth = 1;
     ctx2.beginPath();
-    ctx2.ellipse(geo.cx, y, rx, ry, 0, 0, Math.PI * 2);
+    ellipsePath(ctx2, geo.cx, y, rx, ry, 0, 0, Math.PI * 2);
     ctx2.stroke();
     // 暖金内环（与爻的边缘自发光呼应）
     const ga = 0.16 + Math.min(1, signal.energy * 1.4 + bass * 0.6) * 0.22;
     ctx2.strokeStyle = `rgba(${gold[0]},${gold[1]},${gold[2]},${ga})`;
     ctx2.lineWidth = 1.1;
     ctx2.beginPath();
-    ctx2.ellipse(geo.cx, y, rx * 0.80, ry * 0.80, 0, 0, Math.PI * 2);
+    ellipsePath(ctx2, geo.cx, y, rx * 0.80, ry * 0.80, 0, 0, Math.PI * 2);
     ctx2.stroke();
   }
 
@@ -615,13 +640,13 @@ function createStage(options) {
       ctx2.lineWidth = ringW;
       ctx2.strokeStyle = ring;
       ctx2.beginPath();
-      ctx2.ellipse(cx, cy, v.rx + ringW / 2, v.ry + ringW / 2, 0, 0, Math.PI * 2);
+      ellipsePath(ctx2, cx, cy, v.rx + ringW / 2, v.ry + ringW / 2, 0, 0, Math.PI * 2);
       ctx2.stroke();
       /* 环上的高光弧（上缘一条亮线，像被顶灯打亮） */
       ctx2.lineWidth = Math.max(0.8, ringW * 0.28);
       ctx2.strokeStyle = `rgba(226,240,255,${0.55 * lit})`;
       ctx2.beginPath();
-      ctx2.ellipse(cx, cy, v.rx + ringW / 2, v.ry + ringW / 2, 0, Math.PI * 1.05, Math.PI * 1.85);
+      ellipsePath(ctx2, cx, cy, v.rx + ringW / 2, v.ry + ringW / 2, 0, Math.PI * 1.05, Math.PI * 1.85);
       ctx2.stroke();
       ctx2.restore();
 
@@ -633,7 +658,7 @@ function createStage(options) {
       inner.addColorStop(1, 'rgba(96,140,190,0)');
       ctx2.fillStyle = inner;
       ctx2.beginPath();
-      ctx2.ellipse(cx, cy, v.rx * 1.22, v.ry * 0.98, 0, 0, Math.PI * 2);
+      ellipsePath(ctx2, cx, cy, v.rx * 1.22, v.ry * 0.98, 0, 0, Math.PI * 2);
       ctx2.fill();
       /* 虹膜：几道同心细弧，给出「机械舱门」的科技感 */
       ctx2.save();
@@ -641,7 +666,7 @@ function createStage(options) {
       ctx2.lineWidth = 1;
       for (let i = 1; i <= 3; i++) {
         ctx2.beginPath();
-        ctx2.ellipse(cx, cy, v.rx * (0.30 + i * 0.24), v.ry * (0.22 + i * 0.24), 0, 0, Math.PI * 2);
+        ellipsePath(ctx2, cx, cy, v.rx * (0.30 + i * 0.24), v.ry * (0.22 + i * 0.24), 0, 0, Math.PI * 2);
         ctx2.stroke();
       }
       ctx2.restore();

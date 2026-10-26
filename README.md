@@ -178,9 +178,9 @@ cd android && ./gradlew assembleDebug
 | `verify-loop.js` | 跨轮曲式 | 19 项 |
 | `verify-render.js` | 渲染器 | 全通过 |
 | `test.js` / `test-recognize.js` | 核心与物象归一 | 全通过 |
-| `verify-stage.js` | 波形台共享核心：在「小程序式」环境（无 AnalyserNode）下渲染校验 | 7 项 |
-| `verify-mini-audio.js` | 小程序播放链路：写盘 + InnerAudioContext，不得触碰 Web Audio | 11 项 |
-| `mp-test.js` | 小程序运行时模拟 | 77 项 |
+| `verify-stage.js` | 波形台共享核心：小程序式环境 + 真机尺寸 + 旧基础库降级 | 11 项 |
+| `verify-mini-audio.js` | 小程序播放链路：写盘 + InnerAudioContext，暂停/继续，不得触碰 Web Audio | 20 项 |
+| `mp-test.js` | 小程序运行时模拟（含浮动条一致性） | 103 项 |
 | `e2e.js` | 真实浏览器 + 真实出声：交互、渲染、方向、动效 | 156 项 |
 
 `e2e.js` 以 CDP 驱动本机浏览器，除功能断言外含**像素级**校验

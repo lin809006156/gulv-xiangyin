@@ -11,12 +11,15 @@
 const D = require('../../core/data.js');
 const C = require('../../core/classics.js');
 const store = require('../../utils/storage.js');
+const mini = require('../../utils/miniplayer.js');
 
 const app = getApp();
 const OPEN_KEY = 'gulv-xiangyin-learn-open';
 
 Page({
+  ...mini.methods,
   data: {
+    ...mini.data,
     open: { origin: false, trigrams: false, hex64: false, finder: false, divination: false, tones: false, yao: false, tone8: false, books: false },
     siXiang: [
       { name: '老阳', broken: false },
@@ -38,9 +41,12 @@ Page({
   },
 
   onLoad() {
+    this.miniBind();
     this.setData(this.buildData());
     this.restoreOpen();
   },
+
+  onUnload() { this.miniUnbind(); },
 
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {

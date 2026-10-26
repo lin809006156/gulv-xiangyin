@@ -177,4 +177,6 @@
   </view>
 
   <template is="miniplayer" data="{{m: mini}}" />
+  <!-- 底部留白：让开标签栏（浮动播放条出现时再多让一些） -->
+  <view class="page-pad {{isPlaying ? 'has-mini' : ''}}"></view>
 </view>

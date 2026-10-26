@@ -17,6 +17,7 @@ const mini = require('../../utils/miniplayer.js');
 Page({
   ...mini.methods,
   data: {
+    ...mini.data,
     list: [],
     empty: true
   },
@@ -24,6 +25,7 @@ Page({
   onUnload() { this.miniUnbind(); },
 
   onShow() {
+    this.miniBind();
     this.refresh();
   },
 

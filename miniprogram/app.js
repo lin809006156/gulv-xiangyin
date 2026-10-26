@@ -72,6 +72,17 @@ App({
         wx.showToast({ title: String(msg).slice(0, 20), icon: 'none' });
       },
       onStateChange: (state, progress) => {
+        /* 播放状态由引擎驱动，而非点按钮时乐观更新 ——
+         * 小程序端起播要先编曲 + 写盘（约一两秒），期间还没出声；
+         * 若点按钮就显示「暂停」，用户此时点暂停会毫无反应。
+         * 故：'rendering' 期间不显示播放条，真正出声（'playing'）才显示。 */
+        if (state === 'playing') {
+          this.setUi({ isPlaying: true, paused: false });
+        } else if (state === 'paused') {
+          this.setUi({ paused: true });
+        } else if (state === 'stopped') {
+          this.setUi({ isPlaying: false, paused: false });
+        }
         const top = topPage();
         if (top && top.onPlayerState) top.onPlayerState(state, progress);
       }

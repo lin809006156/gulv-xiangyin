@@ -1309,9 +1309,23 @@ class Player {
    * 挂起后音频时间轴随之冻结，已排期的声源停在原地；
    * 恢复（resume）时从**同一处**继续，故为无缝衔接，
    * 不必重新编曲、也不必重渲染（那一秒多的停顿正源于此）。
+   *
+   * 小程序端没有 Web Audio —— 走 InnerAudioContext.pause()，
+   * 从播放位置原地停住，恢复时接着放。
    */
   pause() {
-    if (!this._ctx || !this.isPlaying) return false;
+    if (!this.isPlaying) return false;
+
+    /* 小程序端：暂停 InnerAudioContext */
+    if (IS_MINIPROGRAM) {
+      if (!this._inner) return false;
+      try { this._inner.pause(); } catch (e) { return false; }
+      this._paused = true;
+      if (this.onStateChange) this.onStateChange('paused');
+      return true;
+    }
+
+    if (!this._ctx) return false;
     if (this._ctx.state === 'suspended') { this._paused = true; return true; }
     try {
       const p = this._ctx.suspend();
@@ -1332,6 +1346,17 @@ class Player {
    *   · 系统挂起了音频上下文（切后台、浏览器策略）—— 由 contextSuspended 报告。
    */
   resume() {
+    if (!this._paused) return false;
+
+    /* 小程序端：恢复 InnerAudioContext（从暂停处接着放） */
+    if (IS_MINIPROGRAM) {
+      if (!this._inner) return false;
+      try { this._inner.play(); } catch (e) { return false; }
+      this._paused = false;
+      if (this.onStateChange) this.onStateChange('playing');
+      return true;
+    }
+
     if (!this._ctx) return false;
     const wasPaused = this._paused || this._ctx.state === 'suspended';
     if (!wasPaused) return false;

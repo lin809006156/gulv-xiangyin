@@ -452,6 +452,33 @@ assert(st.stats().flowMode === 'drain', '状态机：drain');
 /* 小程序端的播放链路校验另见 scripts/verify-mini-audio.js
  * （那一段需等即兴连播首轮编完，走 Promise，单独成脚本更可靠）。 */
 
+console.log('\n【10b】浮动播放条一致性');
+{
+  // 各页都必须：① 引入 miniplayer 工具 ② data 里有 mini 初始值
+  //   ③ onLoad 订阅、onUnload 退订
+  // 少了任何一条，浮动播放条在那一页就不显示或状态不更新。
+  const fsx = require('fs');
+  const pathx = require('path');
+  const MProot = pathx.join(__dirname, '..', 'miniprogram', 'pages');
+  const pages = ['index', 'detail', 'calendar', 'music', 'learn'];
+  for (const pg of pages) {
+    const js = fsx.readFileSync(pathx.join(MProot, pg, pg + '.js'), 'utf8');
+    const wxml = fsx.readFileSync(pathx.join(MProot, pg, pg + '.wxml'), 'utf8');
+    assert(js.indexOf('mini.methods') >= 0, pg + '：已引入 miniplayer 方法');
+    assert(js.indexOf('...mini.data') >= 0, pg + '：data 含 mini 初始值');
+    assert(js.indexOf('this.miniBind()') >= 0, pg + '：onLoad 订阅播放状态');
+    assert(js.indexOf('this.miniUnbind()') >= 0, pg + '：onUnload 退订');
+    assert(wxml.indexOf('miniplayer') >= 0, pg + '：wxml 含浮动条模板');
+  }
+  // 浮动条与标签栏须同宽（否则视觉上不对齐）
+  const wxss = fsx.readFileSync(pathx.join(__dirname, '..', 'miniprogram', 'app.wxss'), 'utf8');
+  const tbwxss = fsx.readFileSync(pathx.join(__dirname, '..', 'miniprogram', 'custom-tab-bar', 'index.wxss'), 'utf8');
+  const miniW = (wxss.match(/[.]miniplayer[^{]*[{][^}]*?width:[ ]*([0-9]+)rpx/) || [])[1];
+  const tabW = (tbwxss.match(/[.]tabbar[^{]*[{][^}]*?width:[ ]*([0-9]+)rpx/) || [])[1];
+  assert(!!miniW && !!tabW && miniW === tabW,
+    '浮动条与标签栏同宽（' + miniW + ' vs ' + tabW + '）');
+}
+
 console.log('\n【11】导航补充');
 navCalls.length = 0;
 

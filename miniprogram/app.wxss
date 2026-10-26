@@ -239,22 +239,32 @@ view, text, button, input, textarea, scroll-view { box-sizing: border-box; }
 /* ===============================================================
    底部留白：给 tabBar 与浮动播放条让位
    =============================================================== */
-.page-pad { height: 200rpx; }
-.page-pad.has-mini { height: 320rpx; }
+.page-pad { height: 220rpx; }
+.page-pad.has-mini { height: 340rpx; }
+/* 非 tabBar 页（详情 / 卦历）：底部没有标签栏，只需让开浮动播放条 */
+.page-pad-nobar { height: 60rpx; }
+.page-pad-nobar.has-mini { height: 200rpx; }
+
+/* 非 tabBar 页（详情 / 卦历）：底部没有标签栏，
+   浮动播放条应贴近屏幕底部，而不是浮在标签栏该在的高度上。 */
+.miniplayer.nobar {
+  bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
 
 /* ===============================================================
    浮动播放条（音乐播放时自底部标签栏上方滑出）
    =============================================================== */
+/* 与底部标签栏**同宽同轴**（标签栏 600rpx），否则两者不对齐 */
 .miniplayer {
   position: fixed;
-  left: 24rpx; right: 24rpx;
-  bottom: calc(140rpx + env(safe-area-inset-bottom));
-  max-width: 702rpx;
+  left: 0; right: 0;
+  bottom: calc(161rpx + env(safe-area-inset-bottom));
+  width: 600rpx;
   margin: 0 auto;
   display: flex;
   align-items: center;
   gap: 12rpx;
-  height: 92rpx;
+  height: 88rpx;
   padding: 0 12rpx 0 20rpx;
   border-radius: 999rpx;
   background: linear-gradient(160deg, rgba(255,254,250,.94), rgba(252,249,242,.76));

@@ -1452,7 +1452,10 @@ class CDP {
   if (consoleErrors.length === 0) {
     ok('无 JS 错误');
   } else {
-    consoleErrors.slice(0, 5).forEach((e) => err('控制台错误：' + String(e).slice(0, 160)));
+    consoleErrors.slice(0, 5).forEach((e) => {
+      err('控制台错误：' + String(e).slice(0, 160));
+      if (process.env.GX_DEBUG_STACK) console.log('  [栈]\n' + String(e).slice(0, 900));
+    });
   }
 
   cdp.close();

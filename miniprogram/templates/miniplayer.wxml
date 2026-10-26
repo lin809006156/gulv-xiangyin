@@ -7,7 +7,16 @@
       <text class="mp-title">{{m.title}}</text>
       <text class="mp-sub">{{m.subtitle}}</text>
     </view>
-    <view class="mp-btn mp-play" bindtap="miniPlay">{{m.paused ? '▶' : '❚❚'}}</view>
-    <view class="mp-btn {{m.loopOn ? 'is-on' : ''}}" bindtap="miniLoop">⟲</view>
+    <!-- 播放 / 暂停：纯 CSS 三角与双竖条（不依赖 Unicode 字形，跨机型一致） -->
+    <view class="mp-btn mp-play" bindtap="miniPlay">
+      <view class="ico-play {{m.paused ? 'is-hidden' : ''}}"></view>
+      <view class="ico-pause {{m.paused ? '' : 'is-hidden'}}">
+        <view class="ico-bar"></view><view class="ico-bar"></view>
+      </view>
+    </view>
+    <!-- 循环：纯 CSS 圆环 + 箭头 -->
+    <view class="mp-btn {{m.loopOn ? 'is-on' : ''}}" bindtap="miniLoop">
+      <view class="ico-loop"></view>
+    </view>
   </view>
 </template>

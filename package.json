@@ -10,7 +10,8 @@
     "bench": "node scripts/bench.js",
     "build:android": "npm run sync && npm run icons && npx cap sync android && npx cap open android",
     "build:ios": "npm run sync && npm run icons && npx cap sync ios && npx cap open ios",
-    "check:sync": "node scripts/check-sync.js"
+    "check:sync": "node scripts/check-sync.js",
+    "verify:stage": "node scripts/verify-stage.js"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.0.0"

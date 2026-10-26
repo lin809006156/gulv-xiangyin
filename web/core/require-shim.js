@@ -24,6 +24,7 @@
     './render.js': 'ICRender',
     './player.js': 'ICPlayer',
     './recognize.js': 'ICRecognize',
+    './viz-stage.js': 'ICVizStage',
     './bootstrap.js': 'ICBootstrap'
   };
 

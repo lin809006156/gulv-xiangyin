@@ -289,3 +289,120 @@ view, text, button, input, textarea, scroll-view { box-sizing: border-box; }
 }
 .mp-btn.is-on { color: #fff; background: linear-gradient(150deg, #D96A57, #B23A2E); border-color: transparent; }
 .mp-play { color: #fff; background: linear-gradient(150deg, #D96A57, #B23A2E); border-color: transparent; }
+
+
+/* ===============================================================
+   纯 CSS 图标（跨机型一致：不依赖 Unicode 字形）
+   =============================================================== */
+
+/* 播放三角 */
+.ico-play {
+  width: 0; height: 0;
+  border-top: 9rpx solid transparent;
+  border-bottom: 9rpx solid transparent;
+  border-left: 14rpx solid currentColor;
+  margin-left: 3rpx;
+}
+/* 暂停双竖条 */
+.ico-pause {
+  display: flex; gap: 4rpx; align-items: center; justify-content: center;
+}
+.ico-pause .ico-bar {
+  width: 4rpx; height: 18rpx; border-radius: 2rpx;
+  background: currentColor;
+}
+.is-hidden { display: none !important; }
+
+/* 循环：圆环 + 箭头 */
+.ico-loop {
+  position: relative;
+  width: 24rpx; height: 24rpx;
+  border: 3rpx solid currentColor;
+  border-radius: 50%;
+  border-top-color: transparent;
+  transform: rotate(-30deg);
+}
+.ico-loop::after {
+  content: '';
+  position: absolute;
+  right: -2rpx; top: -3rpx;
+  width: 0; height: 0;
+  border-left: 7rpx solid currentColor;
+  border-top: 4rpx solid transparent;
+  border-bottom: 4rpx solid transparent;
+  transform: rotate(-20deg);
+}
+
+/* 音量：喇叭形 */
+.ico-vol {
+  position: relative;
+  width: 22rpx; height: 22rpx;
+}
+.ico-vol::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 7rpx;
+  width: 0; height: 0;
+  border-top: 7rpx solid transparent;
+  border-bottom: 7rpx solid transparent;
+  border-right: 8rpx solid currentColor;
+}
+.ico-vol::after {
+  content: '';
+  position: absolute;
+  left: 8rpx; top: 6rpx;
+  width: 7rpx; height: 10rpx;
+  border-right: 3rpx solid currentColor;
+  border-radius: 0 12rpx 12rpx 0;
+}
+
+/* 太极（阴阳鱼）：外环 + 两半 */
+.ico-taiji {
+  position: relative;
+  width: 56rpx; height: 56rpx;
+  border-radius: 50%;
+  border: 3rpx solid var(--ink-2);
+  overflow: hidden;
+}
+.ico-taiji::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 0;
+  width: 50%; height: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--ink-2);
+}
+.ico-taiji::after {
+  content: '';
+  position: absolute;
+  left: 50%; bottom: 0;
+  width: 50%; height: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1rpx var(--ink-2);
+}
+
+/* 音符（起卦页「去音乐栏」） */
+.ico-note {
+  position: relative;
+  width: 22rpx; height: 24rpx;
+}
+.ico-note::before {
+  content: '';
+  position: absolute;
+  left: 0; bottom: 0;
+  width: 11rpx; height: 9rpx;
+  border-radius: 50% 50% 42% 42%;
+  background: currentColor;
+  transform: rotate(-16deg);
+}
+.ico-note::after {
+  content: '';
+  position: absolute;
+  left: 9rpx; bottom: 6rpx;
+  width: 3rpx; height: 18rpx;
+  border-radius: 2rpx;
+  background: currentColor;
+}

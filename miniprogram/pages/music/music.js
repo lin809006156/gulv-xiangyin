@@ -12,7 +12,7 @@ const H = require('../../core/hexagram.js');
 const M = require('../../core/music.js');
 const D = require('../../core/data.js');
 const store = require('../../utils/storage.js');
-const { createStage } = require('../../viz/stage.js');
+const Viz = require('../../core/viz-stage.js');
 
 const app = getApp();
 const mini = require('../../utils/miniplayer.js');
@@ -69,7 +69,7 @@ Page({
 
   onLoad() {
     this.miniBind();
-    this.stage = createStage();
+    this.stage = Viz.createStage();
     this.canvas = null;
     this.raf = 0;
     this.lastT = 0;
@@ -125,14 +125,22 @@ Page({
       playerTip: '即兴连播中：八段一循环，同一动机逐段生长、不作原样复读。'
     });
     // 波形台：卦象结构
-    const rows = reading.yaoList.map((y) => (y.isYang ? 1 : 0)).reverse();
-    const moving = [];
-    reading.yaoList.forEach((y, i) => { if (y.isMoving) moving.push(6 - i); });
-    this.stage.setHex(rows, moving);
+    this.applyHex(reading);
     // 曲名同步到浮动播放条
     app.setUi({ title: reading.name, subtitle: music.modeName });
     // 画布随 wx:if 出现，稍后再取一次节点
     if (!this.canvas) setTimeout(() => this.initCanvas(0), 80);
+  },
+
+  /** 把卦象结构送到波形台 */
+  applyHex(reading) {
+    const rd = reading || (app.globalData.currentResult
+      ? H.buildReading(app.globalData.currentResult) : null);
+    if (!rd) return;
+    const rows = rd.yaoList.map((y) => (y.isYang ? 1 : 0)).reverse();
+    const moving = [];
+    rd.yaoList.forEach((y, i) => { if (y.isMoving) moving.push(6 - i); });
+    this.stage.setHex(rows, moving);
   },
 
   buildInstruments() {
@@ -171,45 +179,86 @@ Page({
     q.select('#viz').fields({ node: true, size: true }).exec((res) => {
       if (!res || !res[0] || !res[0].node) {
         // 画布在 wx:if 里，节点可能尚未渲染 → 稍后重试
-        if (tries < 6) setTimeout(() => this.initCanvas(tries + 1), 120);
+        if (tries < 10) setTimeout(() => this.initCanvas(tries + 1), 120);
         return;
       }
       const canvas = res[0].node;
-      const dpr = (wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : wx.getSystemInfoSync().pixelRatio) || 2;
-      canvas.width = res[0].width * dpr;
-      canvas.height = res[0].height * dpr;
+      const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+      const dpr = info.pixelRatio || 2;
+      // 画布的物理像素 = CSS 像素 × dpr
+      const cssW = res[0].width || 320;
+      const cssH = res[0].height || 150;
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
       const ctx = canvas.getContext('2d');
-      ctx.scale(dpr, dpr);
+      // 坐标系缩放到 CSS 像素，故共享渲染核心里的坐标一律用 CSS 像素
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       this.canvas = canvas;
-      this.stage.init(canvas, dpr);
+      this.ctx = ctx;
+      this.stage.attach(ctx, cssW, cssH);
+      // 画布就绪后同步一次卦象（画布拿到前 syncResult 可能还没跑到）
+      this.applyHex();
       this.startLoop();
     });
+  },
+
+  /**
+   * 下一帧
+   * ---------------------------------------------------------------
+   * 小程序**逻辑层没有全局 requestAnimationFrame**（那是渲染层的能力）。
+   * 优先用 canvas 节点自带的 requestAnimationFrame（基础库 2.7.0+，
+   * 帧率跟随系统刷新、页面隐藏时自动暂停）；拿不到则退回 setTimeout。
+   */
+  nextFrame(cb) {
+    if (this.canvas && typeof this.canvas.requestAnimationFrame === 'function') {
+      return this.canvas.requestAnimationFrame(cb);
+    }
+    if (typeof requestAnimationFrame === 'function') {
+      return requestAnimationFrame(cb);
+    }
+    return setTimeout(() => cb(Date.now()), 16);
+  },
+
+  cancelFrame(id) {
+    if (!id) return;
+    if (this.canvas && typeof this.canvas.cancelAnimationFrame === 'function') {
+      try { this.canvas.cancelAnimationFrame(id); return; } catch (e) { /* 落到下面 */ }
+    }
+    if (typeof cancelAnimationFrame === 'function') {
+      try { cancelAnimationFrame(id); return; } catch (e) { /* 落到下面 */ }
+    }
+    clearTimeout(id);
   },
 
   startLoop() {
     this.stopLoop();
     this.lastT = Date.now();
     const tick = () => {
-      this.raf = requestAnimationFrame(tick);
+      this.raf = this.nextFrame(tick);
       const now = Date.now();
-      const dt = Math.min(50, now - this.lastT);
+      const dt = Math.min(50, now - this.lastT);   // 毫秒
       this.lastT = now;
       const p = app.globalData.player;
       const isPlaying = !!(p && p.isPlaying && !p.paused);
-      // 频谱：由乐谱按播放位置推算（小程序无 AnalyserNode）
-      let sp = null;
+      const paused = !!(p && p.paused && p.isPlaying);
+
+      // 频谱：小程序无 AnalyserNode → 由乐谱按播放位置推算
+      let bins = null;
       if (p && isPlaying) {
         const pos = p.genPos;
-        if (pos) sp = this.stage.spectrumFrom(pos, 48);
+        if (pos) bins = Viz.spectrumFromScore(pos.score, pos.elapsed, 64);
       }
-      this.stage.feed(sp, isPlaying);
-      this.stage.draw(dt);
+
+      // 状态机：playing / paused / drain / idle
+      this.stage.setFlowState(isPlaying ? 'playing' : (paused ? 'paused' : 'drain'));
+      this.stage.setSignal({ bins });
+      this.stage.draw(this.ctx, dt / 1000);        // dt 换成秒
     };
-    this.raf = requestAnimationFrame(tick);
+    this.raf = this.nextFrame(tick);
   },
 
   stopLoop() {
-    if (this.raf) { cancelAnimationFrame(this.raf); this.raf = 0; }
+    if (this.raf) { this.cancelFrame(this.raf); this.raf = 0; }
   },
 
   /* =============================================================

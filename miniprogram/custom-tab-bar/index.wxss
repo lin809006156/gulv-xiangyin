@@ -38,13 +38,89 @@
   box-shadow: 0 2rpx 0 rgba(255,255,255,.9) inset, 0 8rpx 22rpx rgba(58,48,34,.12);
 }
 .tabitem:active { transform: scale(.95); }
-.tb-ico {
-  width: 44rpx; height: 44rpx;
-  display: flex; align-items: center; justify-content: center;
-}
-.tb-ico .tb-shape { width: 34rpx; height: 30rpx; }
+
 .tb-txt {
   font-size: 21rpx;
   font-weight: 600;
   letter-spacing: .1em;
+}
+
+/* ===============================================================
+   图标：全部用 CSS 形状拼出（不依赖图片资源，包体零增长）
+   颜色统一 currentColor，随选中态变朱砂
+   =============================================================== */
+
+.tb-ico {
+  width: 44rpx; height: 44rpx;
+  display: flex; align-items: center; justify-content: center;
+}
+.tb-ico .tb-shape {
+  position: relative;
+  width: 36rpx; height: 32rpx;
+}
+
+/* ---------- 一、起卦：三爻（阳爻实、阴爻断） ---------- */
+.tb-shape .tb-line {
+  position: absolute;
+  left: 0;
+  width: 36rpx;
+  height: 5rpx;
+  border-radius: 3rpx;
+  background: currentColor;
+}
+.tb-shape .tb-line.is-broken {
+  width: 15rpx;
+}
+.tb-shape .tb-line.is-broken + .tb-line.is-broken {
+  left: 21rpx;
+}
+
+/* ---------- 二、音乐：符头 + 符干 + 符尾 ---------- */
+.tb-shape.tb-music .tb-note {
+  position: absolute;
+  left: 3rpx; bottom: 3rpx;
+  width: 13rpx; height: 10rpx;
+  border-radius: 50% 50% 42% 42%;
+  background: currentColor;
+  transform: rotate(-16deg);
+}
+.tb-shape.tb-music .tb-stem {
+  position: absolute;
+  left: 14rpx; bottom: 9rpx;
+  width: 3rpx; height: 22rpx;
+  border-radius: 2rpx;
+  background: currentColor;
+}
+.tb-shape.tb-music .tb-flag {
+  position: absolute;
+  left: 17rpx; top: 1rpx;
+  width: 0; height: 0;
+  border-top: 8rpx solid transparent;
+  border-bottom: 5rpx solid transparent;
+  border-left: 13rpx solid currentColor;
+}
+
+/* ---------- 三、学易：书册（两页 + 书脊） ---------- */
+.tb-shape.tb-book .tb-page {
+  position: absolute;
+  top: 3rpx;
+  width: 17rpx; height: 26rpx;
+  background: currentColor;
+}
+.tb-shape.tb-book .tb-page.left {
+  left: 0;
+  border-radius: 3rpx 0 0 3rpx;
+  opacity: .92;
+}
+.tb-shape.tb-book .tb-page.right {
+  right: 0;
+  border-radius: 0 3rpx 3rpx 0;
+  opacity: .58;
+}
+.tb-shape.tb-book .tb-spine {
+  position: absolute;
+  left: 17rpx; top: 3rpx;
+  width: 2rpx; height: 26rpx;
+  background: currentColor;
+  opacity: .42;
 }

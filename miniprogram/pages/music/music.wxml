@@ -21,7 +21,7 @@
       </view>
     </block>
     <block wx:else>
-      <view class="me-icon">☯</view>
+      <view class="me-icon"><view class="ico-taiji"></view></view>
       <text class="me-title">还没有卦象之音</text>
       <text class="me-desc">先在「起卦」栏取一卦，这里就会出现属于它的心音。</text>
       <view class="btn btn-ghost btn-sm" bindtap="goCast">去起一卦</view>
@@ -29,7 +29,7 @@
   </view>
 
   <!-- 播放器：即兴连播 -->
-  <view class="glass-card" wx:if="{{hasResult}}">
+  <view class="glass-card">
     <view class="card-head">
       <text class="ch-title">心音</text>
       <view class="gen-live" wx:if="{{isPlaying}}">
@@ -38,21 +38,29 @@
       </view>
     </view>
 
+    <!-- 波形台：始终渲染（不放在 wx:if 里）——
+         画布在条件渲染中会取不到节点，导致「波形台不显示」。
+         未起卦时画布仍在，只是不出卦体。 -->
     <view class="viz-wrap">
       <canvas type="2d" id="viz" class="viz"></canvas>
     </view>
 
     <view class="player-controls">
       <view class="btn btn-primary btn-play" bindtap="togglePlay">
-        <text class="pc-ico">{{isPlaying ? '❚❚' : '▶'}}</text>
+        <view class="pc-ico">
+          <view class="ico-play {{isPlaying ? 'is-hidden' : ''}}"></view>
+          <view class="ico-pause {{isPlaying ? '' : 'is-hidden'}}">
+            <view class="ico-bar"></view><view class="ico-bar"></view>
+          </view>
+        </view>
         <text>{{isPlaying ? '暂停' : (paused ? '继续' : '播放')}}</text>
       </view>
       <view class="btn btn-ghost btn-sm" bindtap="toggleLoop">
-        <text class="pc-ico">⟲</text>
+        <view class="pc-ico"><view class="ico-loop"></view></view>
         <text>{{loopOn ? '循环中' : '循环'}}</text>
       </view>
       <view class="vol">
-        <text class="vol-ico">◍</text>
+        <view class="vol-ico"><view class="ico-vol"></view></view>
         <slider class="vol-slider" min="0" max="100" value="{{volume}}" activeColor="#B23A2E"
                 backgroundColor="rgba(178,160,132,.22)" block-size="16" block-color="#B23A2E"
                 bindchanging="onVolume" bindchange="onVolume" />

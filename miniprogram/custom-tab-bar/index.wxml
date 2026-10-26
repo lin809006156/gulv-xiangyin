@@ -1,4 +1,4 @@
-<!-- 底部玻璃胶囊标签栏：图标用矢量块拼出（不依赖图片资源） -->
+<!-- 底部玻璃胶囊标签栏：图标用 CSS 形状拼出（不依赖图片资源） -->
 <view class="tabbar-wrap">
   <view class="tabbar">
     <view
@@ -10,24 +10,29 @@
       bindtap="onTap"
     >
       <view class="tb-ico">
+        <!-- 一、起卦：三爻（自上而下 阳·阴·阳） -->
         <block wx:if="{{index === 0}}">
-          <!-- 起卦：三爻 -->
           <view class="tb-shape">
-            <view class="tb-line" wx:for="{{[0,1,2]}}" wx:key="*this" style="top: {{index * 9}}rpx;"></view>
+            <view class="tb-line" style="top: 3rpx;"></view>
+            <view class="tb-line is-broken" style="top: 13rpx;"></view>
+            <view class="tb-line is-broken" style="top: 13rpx;"></view>
+            <view class="tb-line" style="top: 23rpx;"></view>
           </view>
         </block>
+        <!-- 二、音乐：符头 + 符干 + 符尾 -->
         <block wx:elif="{{index === 1}}">
-          <!-- 音乐：符头 + 干 -->
           <view class="tb-shape tb-music">
             <view class="tb-note"></view>
             <view class="tb-stem"></view>
+            <view class="tb-flag"></view>
           </view>
         </block>
+        <!-- 三、学易：书册 -->
         <block wx:else>
-          <!-- 学易：书册 -->
           <view class="tb-shape tb-book">
-            <view class="tb-page"></view>
+            <view class="tb-page left"></view>
             <view class="tb-spine"></view>
+            <view class="tb-page right"></view>
           </view>
         </block>
       </view>

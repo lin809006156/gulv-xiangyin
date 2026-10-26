@@ -361,9 +361,11 @@ learn.onUpper({ detail: { value: 0 } });
 learn.onLower({ detail: { value: 0 } });
 assert(!!learn.data.found, '按上下卦找卦：上乾下乾 → 乾');
 
-console.log('\n【11b】波形台模块（小程序版）');
-const stageMod = loadInternal('viz/stage.js');
-assert(!!stageMod.createStage, '波形台模块可加载');
+console.log('\n【11b】波形台共享渲染核心（core/viz-stage.js）');
+const stageMod = loadInternal('core/viz-stage.js');
+assert(!!stageMod.createStage, '波形台共享模块可加载');
+assert(!!stageMod.spectrumFromScore, '频谱推算函数可加载');
+assert(!!stageMod.analyze, '频段分析函数可加载');
 const spec = stageMod.spectrumFromScore({
   notes: [{ time: 0, dur: 1, midi: 60, vel: 1 }, { time: 0, dur: 1, midi: 72, vel: 0.8 }]
 }, 0.5, 48);
@@ -375,6 +377,65 @@ const spec2 = stageMod.spectrumFromScore({ notes: [{ time: 0, dur: 1, midi: 60, 
 let mx2 = 0;
 for (let i = 0; i < spec2.length; i++) if (spec2[i] > mx2) mx2 = spec2[i];
 assert(mx2 === 0, '播放位置之外无能量');
+
+// 频段分析：与网页版同一套公式
+const bands = stageMod.analyze(new Uint8Array(256).fill(200));
+assert(bands.low > 0 && bands.high > 0, '频段分析有值');
+
+// 波形台实例：状态机与几何
+const st = stageMod.createStage();
+st.resize(320, 150);
+st.setHex([1, 0, 1, 0, 1, 0], [3]);
+const g = st.geo();
+assert(!!g && g.scale > 0, '波形台几何已建立');
+assert(g.rows === 6, '卦体六爻');
+st.setFlowState('playing');
+st.setSignal({ bins: spec });
+assert(st.stats().flowMode === 'playing', '状态机：playing');
+st.setFlowState('paused');
+assert(st.stats().flowMode === 'paused', '状态机：paused');
+st.setFlowState('drain');
+assert(st.stats().flowMode === 'drain', '状态机：drain');
+
+// 波形台在「小程序式」环境下能出图（用桩上下文记录绘制调用）
+{
+  const calls = { fill: 0, stroke: 0, gradient: 0 };
+  const stubCtx = new Proxy({}, {
+    get(t, k) {
+      if (k === 'fillRect' || k === 'strokeRect') return () => { calls.fill++; };
+      if (k === 'fill' || k === 'stroke') return () => { calls.stroke++; };
+      if (k === 'createLinearGradient' || k === 'createRadialGradient') {
+        calls.gradient++;
+        return () => ({ addColorStop() {} });
+      }
+      if (k === 'measureText') return () => ({ width: 10 });
+      if (k === 'beginPath' || k === 'moveTo' || k === 'lineTo' || k === 'closePath'
+        || k === 'save' || k === 'restore' || k === 'clip' || k === 'rect'
+        || k === 'arc' || k === 'arcTo' || k === 'ellipse' || k === 'setTransform'
+        || k === 'translate' || k === 'scale' || k === 'rotate'
+        || k === 'clearRect' || k === 'drawImage' || k === 'fillText'
+        || k === 'setLineDash' || k === 'quadraticCurveTo' || k === 'bezierCurveTo') {
+        return () => {};
+      }
+      return undefined;
+    },
+    set() { return true; }
+  });
+  const st2 = stageMod.createStage();
+  st2.attach(stubCtx, 320, 150);
+  st2.setHex([1, 0, 1, 0, 1, 0], []);
+  st2.setFlowState('playing');
+  // 渐入需 2 秒（FLOW_INTRO），故跑 130 帧（≈2.2 秒）才够
+  for (let i = 0; i < 130; i++) {
+    st2.setSignal({ bins: spec });
+    st2.draw(stubCtx, 1 / 60);
+  }
+  const s2 = st2.stats();
+  assert(s2.n > 20, `小程序式环境：丝缕生成 ${s2.n} 条`);
+  assert(calls.fill > 100, `小程序式环境：绘制调用充分（fill ${calls.fill} / stroke ${calls.stroke}）`);
+  assert(calls.gradient > 20, `小程序式环境：渐变已用（${calls.gradient} 处）`);
+  assert(s2.intro >= 0.99, `小程序式环境：渐入完成 ${s2.intro.toFixed(2)}`);
+}
 
 console.log('\n【11】导航补充');
 navCalls.length = 0;

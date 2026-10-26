@@ -39,6 +39,7 @@ const FILES = [
   'render.js',
   'player.js',
   'recognize.js',
+  'viz-stage.js',
 ];
 
 function copyFile(src, dst) {

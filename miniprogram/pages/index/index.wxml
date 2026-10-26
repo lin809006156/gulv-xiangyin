@@ -160,7 +160,7 @@
     </view>
     <view class="player-controls">
       <view class="btn btn-play" bindtap="goMusic">
-        <text class="play-icon">♪</text>
+        <view class="play-icon"><view class="ico-note"></view></view>
         <text>去音乐栏</text>
       </view>
       <view class="btn btn-ghost btn-sm" bindtap="goCalendar">卦历</view>

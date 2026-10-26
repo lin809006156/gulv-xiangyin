@@ -55,6 +55,7 @@ Page({
   onUnload() { this.miniUnbind(); },
 
   onShow() {
+    this.miniSync();
     this.loadResult();
   },
 

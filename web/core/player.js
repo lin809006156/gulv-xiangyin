@@ -712,18 +712,26 @@ class Player {
         const inner = wx.createInnerAudioContext();
         this._inner = inner;
         inner.obeyMuteSwitch = false;
+        // 新建的 inner 要继承当前音量 —— 否则换轮后音量会被重置为默认
+        if (this._volume != null) inner.volume = this._volume;
         // 进度上报（播放条的时间显示）
         inner.onTimeUpdate(() => {
           if (!this.current) return;
           if (this.onProgress) this.onProgress(inner.currentTime, this.current.duration);
         });
         inner.onEnded(() => {
-          if (g.playing && this._gen === g) {
-            let next;
-            try { next = this._genComposeRound(g, round.round + 1); }
-            catch (e) { if (this.onError) this.onError('续编失败：' + e.message); return; }
-            this._playMiniGenRound(g, next);
+          if (!g.playing || this._gen !== g) return;
+          /* 循环开关：即兴连播本身是「八段一循环」的无限续播，
+             但用户显式关掉循环时，一轮结束即止（与网页端一致）。 */
+          if (!this.loop) {
+            this.stopGenerative();
+            if (this.onEnd) this.onEnd();
+            return;
           }
+          let next;
+          try { next = this._genComposeRound(g, round.round + 1); }
+          catch (e) { if (this.onError) this.onError('续编失败：' + e.message); return; }
+          this._playMiniGenRound(g, next);
         });
         inner.onError((err) => {
           if (this.onError) this.onError('播放失败：' + (err.errMsg || '未知错误'));
@@ -1436,6 +1444,7 @@ class Player {
   /** 设置音量 0..1 */
   setVolume(v) {
     const vol = Math.max(0, Math.min(1, v));
+    this._volume = vol;                 // 记住，供新建的音频源继承
     if (this._master) this._master.gain.value = vol;
     if (this._inner) this._inner.volume = vol;
   }

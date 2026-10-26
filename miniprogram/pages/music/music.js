@@ -74,15 +74,13 @@ Page({
     this.canvas = null;
     this.raf = 0;
     this.lastT = 0;
-    this._unsub = app.onUiChange((ui) => {
-      this.setData({
-        isPlaying: ui.isPlaying, paused: ui.paused, loopOn: ui.loopOn, mini: ui
-      });
-    });
+    // 播放状态订阅由 miniBind() 统一负责（它同时同步 mini / isPlaying / paused / loopOn），
+    // 此处不再重复订阅，避免一次状态变化触发两次 setData。
     this.setData({ instruments: this.buildInstruments() });
   },
 
   onShow() {
+    this.miniSync();
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setSelected(1);
     }
@@ -96,7 +94,7 @@ Page({
   },
 
   onHide() { this.stopLoop(); },
-  onUnload() { this.miniUnbind(); this.stopLoop(); if (this._unsub) this._unsub(); },
+  onUnload() { this.miniUnbind(); this.stopLoop(); },
 
   /* =============================================================
    * 数据
@@ -360,7 +358,10 @@ Page({
     const score = buildAuditionScore(key);
     this.setData({ playingKey: key, playerTip: '正在试听：' + it.name + '（' + it.mat + '声，配' + it.guaName + '卦）' });
     p.play(score, { offset: 0 });
-    app.setUi({ isPlaying: true, paused: false, title: it.name, subtitle: it.mat + '声 · ' + it.guaName });
+    /* 不乐观设 isPlaying —— 小程序端要先写盘才出声，
+     * 真正开始播放时引擎会发 'playing'，那时才更新全局状态
+     * （否则会出现「显示在播却还没声音」以及暂停键按不动）。 */
+    app.setUi({ title: it.name, subtitle: it.mat + '声 · ' + it.guaName });
   },
 
   goCast() {

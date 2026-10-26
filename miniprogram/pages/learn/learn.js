@@ -49,6 +49,7 @@ Page({
   onUnload() { this.miniUnbind(); },
 
   onShow() {
+    this.miniSync();
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setSelected(2);
     }

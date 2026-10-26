@@ -1,4 +1,5 @@
 <!-- 学易页：八章，折叠展开。内容全部取自 core，与网页版同源 -->
+<import src="../../templates/miniplayer.wxml" />
 <view class="lp-page">
 
   <view class="lp-intro">

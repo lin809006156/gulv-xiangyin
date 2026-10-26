@@ -8,9 +8,11 @@
       <text class="mp-sub">{{m.subtitle}}</text>
     </view>
     <!-- 播放 / 暂停：纯 CSS 三角与双竖条（不依赖 Unicode 字形，跨机型一致） -->
+    <!-- 图标显隐看「paused」：暂停时引擎仍在播（isPlaying 为 true），
+         若拿 isPlaying 判断，暂停后图标永远不会变。 -->
     <view class="mp-btn mp-play" bindtap="miniPlay">
-      <view class="ico-play {{m.paused ? 'is-hidden' : ''}}"></view>
-      <view class="ico-pause {{m.paused ? '' : 'is-hidden'}}">
+      <view class="ico-play {{m.isPlaying && !m.paused ? 'is-hidden' : ''}}"></view>
+      <view class="ico-pause {{m.isPlaying && !m.paused ? '' : 'is-hidden'}}">
         <view class="ico-bar"></view><view class="ico-bar"></view>
       </view>
     </view>

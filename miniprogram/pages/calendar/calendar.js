@@ -25,6 +25,7 @@ Page({
   onUnload() { this.miniUnbind(); },
 
   onShow() {
+    this.miniSync();
     this.miniBind();
     this.refresh();
   },

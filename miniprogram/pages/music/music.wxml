@@ -48,13 +48,16 @@
 
     <view class="player-controls">
       <view class="btn btn-primary btn-play" bindtap="togglePlay">
+        <!-- 图标显隐看「paused」而非「isPlaying」：
+             暂停时 isPlaying 仍为 true（引擎仍在播，只是被挂起），
+             若拿它判断，暂停后图标就永远不会变。 -->
         <view class="pc-ico">
-          <view class="ico-play {{isPlaying ? 'is-hidden' : ''}}"></view>
-          <view class="ico-pause {{isPlaying ? '' : 'is-hidden'}}">
+          <view class="ico-play {{isPlaying && !paused ? 'is-hidden' : ''}}"></view>
+          <view class="ico-pause {{isPlaying && !paused ? '' : 'is-hidden'}}">
             <view class="ico-bar"></view><view class="ico-bar"></view>
           </view>
         </view>
-        <text>{{isPlaying ? '暂停' : (paused ? '继续' : '播放')}}</text>
+        <text>{{isPlaying ? (paused ? '继续' : '暂停') : '播放'}}</text>
       </view>
       <view class="btn btn-ghost btn-sm" bindtap="toggleLoop">
         <view class="pc-ico"><view class="ico-loop"></view></view>

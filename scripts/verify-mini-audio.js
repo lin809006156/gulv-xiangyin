@@ -172,6 +172,27 @@ function loadAsMiniprogram(relPath) {
     assert(states.indexOf('playing') >= 0, '继续：发出了 playing 状态事件');
   }
 
+  /* ⑥ 暂停后 isPlaying 仍为 true —— 这是「图标不切换」类 bug 的根源。
+   *    引擎语义：暂停 = 挂起（仍在播），停止才是结束。
+   *    UI 若拿 isPlaying 判断图标，暂停后就永远看不到变化。
+   *    注意：上面刚做过 resume()，paused 已被清，故这里要重新暂停再断言。 */
+  {
+    pl.pause();
+    assert(pl.isPlaying === true, '暂停后 isPlaying 仍为 true（暂停≠停止）');
+    assert(pl.paused === true, '暂停后 paused 为 true');
+    pl.resume();
+  }
+
+  /* ⑦ 音量：新建的音频源须继承当前音量（否则换轮后音量被重置） */
+  {
+    pl.setVolume(0.42);
+    assert(Math.abs(pl._volume - 0.42) < 1e-6, 'setVolume 记住了音量值');
+    const innerVol = audioContexts.length
+      ? audioContexts[audioContexts.length - 1].volume : null;
+    assert(innerVol != null && Math.abs(innerVol - 0.42) < 1e-6,
+      '当前播放中的音频源音量已生效（' + innerVol + '）');
+  }
+
   pl.stop();
 
   console.log('\n' + '='.repeat(46));

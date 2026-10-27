@@ -40,6 +40,7 @@ const FILES = [
   'player.js',
   'recognize.js',
   'viz-stage.js',
+  'taiji.js',
 ];
 
 function copyFile(src, dst) {

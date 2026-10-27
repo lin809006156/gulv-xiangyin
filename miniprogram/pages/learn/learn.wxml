@@ -14,7 +14,8 @@
       <text class="lsec-arrow">›</text>
     </view>
     <view class="lsec-body" wx:if="{{open.origin}}">
-      <view class="taiji"><text class="dot-dark"></text><text class="dot-light"></text></view>
+      <!-- 太极图用 Canvas 绘制：纯 CSS 无法做出 S 形分界（见 utils/taiji.js 注释） -->
+      <canvas type="2d" id="taiji" class="taiji"></canvas>
       <view class="taiji-cap">太极：动而生两仪</view>
       <view class="gen-flow">
         <text class="gen-node">太极</text><text class="gen-arrow">→</text>
@@ -109,28 +110,10 @@
     </view>
   </view>
 
-  <!-- 五、起卦与卜筮 -->
-  <view class="lsec {{open.divination ? 'is-open' : ''}}" bindtap="toggle" data-key="divination">
-    <view class="lsec-head">
-      <text class="lsec-no">五</text>
-      <text>起卦与卜筮</text>
-      <text class="lsec-arrow">›</text>
-    </view>
-    <view class="lsec-body" wx:if="{{open.divination}}">
-      <text class="lb-title">本应用三法</text>
-      <text>· 每日一卦：依梅花易数时间起卦，以年月日时成卦，同日之内此卦恒定不变。</text>
-      <text>· 观象起卦：观身边物象为上卦，以当下时辰为下卦（物象归一据《说卦传》卦性）。</text>
-      <text>· 数字起卦：心念所至，报两数以上卦，上卦取第一数，下卦取第二数，动爻由两数之和定。</text>
-      <text class="lb-title">古法（仅作文献介绍）</text>
-      <text>蓍占、龟卜、梅花易数、金钱卦等法，见于《周易·系辞》与后世筮书。本应用不设投掷功能，仅作文献陈列。</text>
-      <text class="lb-note">占戒：卜以决疑，不疑不占；心诚则灵，诚则一以贯之。</text>
-    </view>
-  </view>
-
   <!-- 六、五音与十二律 -->
   <view class="lsec {{open.tones ? 'is-open' : ''}}" bindtap="toggle" data-key="tones">
     <view class="lsec-head">
-      <text class="lsec-no">六</text>
+      <text class="lsec-no">五</text>
       <text>五音与十二律</text>
       <text class="lsec-arrow">›</text>
     </view>
@@ -158,7 +141,7 @@
   <!-- 七、爻位与变卦 -->
   <view class="lsec {{open.yao ? 'is-open' : ''}}" bindtap="toggle" data-key="yao">
     <view class="lsec-head">
-      <text class="lsec-no">七</text>
+      <text class="lsec-no">六</text>
       <text>爻位与变卦</text>
       <text class="lsec-arrow">›</text>
     </view>
@@ -173,7 +156,7 @@
   <!-- 八、八音配卦 -->
   <view class="lsec {{open.tone8 ? 'is-open' : ''}}" bindtap="toggle" data-key="tone8">
     <view class="lsec-head">
-      <text class="lsec-no">八</text>
+      <text class="lsec-no">七</text>
       <text>八音配卦</text>
       <text class="lsec-arrow">›</text>
     </view>
@@ -193,7 +176,7 @@
   <!-- 九、所据典籍 -->
   <view class="lsec {{open.books ? 'is-open' : ''}}" bindtap="toggle" data-key="books">
     <view class="lsec-head">
-      <text class="lsec-no">九</text>
+      <text class="lsec-no">八</text>
       <text>所据典籍</text>
       <text class="lsec-arrow">›</text>
     </view>

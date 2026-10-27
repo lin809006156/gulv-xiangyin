@@ -127,8 +127,13 @@
 
     return `
     <svg viewBox="0 0 420 352" role="img" aria-label="太极生两仪，两仪生四象，四象生八卦">
-      <!-- 太极 -->
-      <text x="210" y="34" text-anchor="middle" font-size="34" fill="#B23A2E">☯</text>
+      <!-- 太极（矢量绘制，不依赖字体字形） -->
+      <g transform="translate(210,26)">
+        <circle cx="0" cy="0" r="15" fill="#F7F2E8" stroke="#B23A2E" stroke-width="1.4"/>
+        <path d="M0,-15 A15,15 0 0,1 0,15 A7.5,7.5 0 0,1 0,0 A7.5,7.5 0 0,0 0,-15 Z" fill="#B23A2E"/>
+        <circle cx="0" cy="-3.75" r="1.9" fill="#F7F2E8"/>
+        <circle cx="0" cy="3.75" r="1.9" fill="#B23A2E"/>
+      </g>
       ${label(210, 54, '太极')}
       ${branch(210, 60, 105, 84)}
       ${branch(210, 60, 315, 84)}
@@ -178,7 +183,8 @@
   function sectionOrigin() {
     return `
     <div class="glass-card learn-hero">
-      <div class="lh-sym">☯</div>
+      <!-- 太极图用 Canvas 绘制（core/taiji.js）：字体字形 ☯ 跨平台可能缺字或变形 -->
+      <canvas class="lh-sym" id="lhTaiji" width="108" height="108"></canvas>
       <h2>易之约</h2>
       <p>《周易·系辞上》：「<b>易有太极，是生两仪，两仪生四象，四象生八卦</b>，八卦定吉凶，吉凶生大业。」<br>
       「生生之谓易。」—— 易之所言，是一套观变化之道的语言，而非命定之数。</p>
@@ -498,60 +504,6 @@
    * 本章先列本应用实现的四法，再列古人五门成法，互相照应。
    * =============================================================== */
 
-  function sectionDivination() {
-    const appItems = C.DIVINATION_METHODS.map((m) => {
-      const kind = m.source === 'classic' ? 'classic' : 'later';
-      const where = {
-        image: '起卦栏 · 观象起卦',
-        number: '起卦栏 · 数字起卦',
-        time: '起卦栏 · 每日一卦'
-      }[m.key] || '起卦栏';
-      return `
-      <div class="method-item">
-        <div class="method-head">${badge(kind)}<span class="method-name">${esc(m.name)}</span>
-          <span class="method-where">${esc(where)}</span></div>
-        <p class="method-cite">${esc(m.cite)}</p>
-        <p class="method-text">${esc(m.text)}</p>
-        <p class="method-note">${esc(m.note)}</p>
-      </div>`;
-    }).join('');
-
-    const ancientItems = C.ANCIENT_DIVINATION.map((m) => {
-      const kind = m.source === 'classic' ? 'classic' : 'later';
-      return `
-      <div class="method-item">
-        <div class="method-head">${badge(kind)}<span class="method-name">${esc(m.name)}</span></div>
-        <p class="method-cite">${esc(m.cite)}</p>
-        <p class="method-text">${esc(m.text)}</p>
-        <p class="method-note">${esc(m.note)}</p>
-      </div>`;
-    }).join('');
-
-    return lsec('肆', '起卦与卜筮', `
-      <p class="lsec-desc">
-        起卦与卜筮，本是一事之两面：卜筮是古人之法，起卦是今日之用。
-        本章先列<b>本应用实现的三法</b>（皆在「起卦」栏可实际操作），
-        再列<b>古人立卦的五门成法</b>，以供对照 —— 重点在「立一个卦来观照处境」，
-        本应用不宣称占卜断事之效，亦不预测吉凶。
-      </p>
-
-      <h4 class="method-subtitle">本应用实现的三法</h4>
-      <div class="method-list">${appItems}</div>
-      <p class="learn-tip">
-        三法在「起卦」栏均可使用：每日一卦（时间起卦，同日恒定）、观象起卦（所见物象，手动选取）、
-        数字起卦（心报两数）。三法皆可多爻动 —— 变卦翻转全部动爻而得；六爻皆静则以本卦为是。
-        铜钱法（金钱卦）本应用<b>只作文献介绍，不设投掷功能</b>。
-      </p>
-
-      <h4 class="method-subtitle">古人立卦的五门成法</h4>
-      <div class="method-list">${ancientItems}</div>
-      <p class="learn-tip">
-        上述古法，本应用以「梅花易数」一路为实操蓝本：取当下所见之物象、所报之数字、
-        当时之刻，立卦观照。蓍占之「三变成爻」、金钱卦之「老阳老阴为动」，
-        与本应用数字起卦的结构一一相通 —— 变的只是演算之法，不变的是「以卦观象」之心。
-      </p>`, 'divination');
-  }
-
   /* ===============================================================
    * 六、五音与十二律
    * =============================================================== */
@@ -582,7 +534,7 @@
       </div>`;
     }).join('');
 
-    return lsec('伍', '五音与十二律', `
+    return lsec('肆', '五音与十二律', `
       <p class="lsec-desc">
         十二律吕定音高之本，五音定调式之性。宫为君、商为臣、角为民、徵为事、羽为物
         （《礼记·乐记》）；五音清浊次第为「宫至浊 → 商 → 角（清浊相半）→ 徵（次清）→ 羽最清」
@@ -634,7 +586,7 @@
   }
 
   function sectionYao() {
-    return lsec('陆', '爻位、动爻与变卦', `
+    return lsec('伍', '爻位、动爻与变卦', `
       <p class="lsec-desc">
         六爻自下而上，依次称初、二、三、四、五、上。爻题两例：
         初、上两爻位置在前（初九、上六），中间四爻阴阳在前（九二、六五）。
@@ -681,7 +633,7 @@
       </div>`;
     }).join('');
 
-    return lsec('柒', '八音配卦', `
+    return lsec('陆', '八音配卦', `
       <p class="lsec-desc">
         金、石、丝、竹、匏、土、革、木八类材质，与八卦一一相配；每卦因外卦之异而得不同主奏乐器，
         此即「古律象音」音色层的第一来源。八种音色均可在「音乐」栏试听。
@@ -708,12 +660,33 @@
         <span class="book-desc">${esc(b.desc)}</span>
       </div>`).join('');
 
-    return lsec('捌', '所据典籍', `
+    return lsec('柒', '所据典籍', `
       <p class="lsec-desc">本项目每一处「定义类」内容，皆可回到以下文献查证；无载者则标注「当代类推」并写明推演链条。</p>
       <div class="book-list">${items}</div>
       <p class="learn-tip">
         本应用为传统文化与音乐艺术赏析而作，不宣称任何预测或疗愈功效；所引古音律之说，皆标出处，供方家查证。
       </p>`, 'books');
+  }
+
+  /**
+   * 画英雄区的太极图（Canvas）
+   * ---------------------------------------------------------------
+   * 与小程序端共用 core/taiji.js，两端画出来完全一致。
+   */
+  function drawTaijiHero() {
+    const cv = document.getElementById('lhTaiji');
+    if (!cv || typeof ICTaiji === 'undefined') return;
+    const dpr = window.devicePixelRatio || 1;
+    const cssSize = 54;                    // 与 .lh-sym 的 font-size 对应
+    cv.width = cssSize * dpr;
+    cv.height = cssSize * dpr;
+    cv.style.width = cssSize + 'px';
+    cv.style.height = cssSize + 'px';
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ICTaiji.draw(ctx, cssSize / 2, cssSize / 2, cssSize / 2 - 1, {
+      stroke: 'rgba(35,32,27,.28)', lineWidth: 1
+    });
   }
 
   /* ===============================================================
@@ -727,7 +700,6 @@
       sectionOrigin() +
       sectionTrigrams() +
       sectionHexagrams() +
-      sectionDivination() +
       sectionTones() +
       sectionYao() +
       sectionEightTone() +
@@ -736,6 +708,7 @@
     bindHex64();
     bindHex64Search();
     bindHex64Finder();
+    drawTaijiHero();
   }
 
   if (document.readyState === 'loading') {

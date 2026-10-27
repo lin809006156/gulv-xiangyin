@@ -2,7 +2,7 @@
  * 古律象音 · 学易页
  * ---------------------------------------------------------------
  * 九章折叠内容，全部取自 core（与网页版同源）：
- * 易之生成 / 八卦速查 / 六十四卦 / 按上下卦找卦 / 起卦与卜筮 /
+ * 易之生成 / 八卦速查 / 六十四卦 / 按上下卦找卦 /
  * 五音与十二律 / 爻位与变卦 / 八音配卦 / 所据典籍。
  */
 
@@ -12,6 +12,7 @@ const D = require('../../core/data.js');
 const C = require('../../core/classics.js');
 const store = require('../../utils/storage.js');
 const mini = require('../../utils/miniplayer.js');
+const taiji = require('../../core/taiji.js');
 
 const app = getApp();
 const OPEN_KEY = 'gulv-xiangyin-learn-open';
@@ -20,7 +21,7 @@ Page({
   ...mini.methods,
   data: {
     ...mini.data,
-    open: { origin: false, trigrams: false, hex64: false, finder: false, divination: false, tones: false, yao: false, tone8: false, books: false },
+    open: { origin: false, trigrams: false, hex64: false, finder: false, tones: false, yao: false, tone8: false, books: false },
     siXiang: [
       { name: '老阳', broken: false },
       { name: '少阳', broken: true },
@@ -44,6 +45,7 @@ Page({
     this.miniBind();
     this.setData(this.buildData());
     this.restoreOpen();
+    this.initTaiji();
   },
 
   onUnload() { this.miniUnbind(); },
@@ -53,6 +55,35 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setSelected(2);
     }
+  },
+
+  /**
+   * 太极图（Canvas 2D）
+   * ---------------------------------------------------------------
+   * 画布节点在折叠区里，展开时才有 —— 故先画一次，
+   * 每次展开「易之生成」再补画一次（节点可能刚挂载）。
+   */
+  initTaiji() {
+    /* 旧基础库可能没有 createSelectorQuery（如测试环境、部分低版本）
+       —— 取不到节点就跳过，不让整个页面崩掉。 */
+    if (typeof wx.createSelectorQuery !== 'function') return;
+    const q = wx.createSelectorQuery().in(this);
+    q.select('#taiji').fields({ node: true, size: true }).exec((res) => {
+      if (!res || !res[0] || !res[0].node) return;
+      const canvas = res[0].node;
+      const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+      const dpr = info.pixelRatio || 2;
+      const cssW = Math.round(res[0].width || 0);
+      const cssH = Math.round(res[0].height || 0);
+      if (cssW < 10 || cssH < 10) return;      // 尺寸未就绪，下次再试
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // 圆心在画布中心，半径取短边的 45%（留出描边余量）
+      taiji.draw(ctx, cssW / 2, cssH / 2, Math.min(cssW, cssH) * 0.45);
+    });
   },
 
   /* =============================================================
@@ -131,6 +162,10 @@ Page({
     const open = Object.assign({}, this.data.open);
     open[key] = !open[key];
     this.setData({ open: open });
+    // 太极图画布在折叠区里，展开后节点才挂载 → 此时补画
+    if (key === 'origin' && open.origin) {
+      setTimeout(() => this.initTaiji(), 60);
+    }
     const pref = store.loadPref() || {};
     pref.learnOpen = open;
     store.savePref(pref);

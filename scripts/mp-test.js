@@ -100,6 +100,14 @@ const wx = {
     }
   }),
 
+  // 选择器查询：返回空结果（模拟「节点取不到」的常见情形）
+  createSelectorQuery: () => ({
+    in() { return this; },
+    select() { return this; },
+    fields() { return this; },
+    exec(cb) { if (cb) cb([]); }
+  }),
+
   // 音频（记录回调，便于测试播放链路）
   createInnerAudioContext: () => {
     const ctx = {
@@ -477,6 +485,31 @@ console.log('\n【10b】浮动播放条一致性');
   const tabW = (tbwxss.match(/[.]tabbar[^{]*[{][^}]*?width:[ ]*([0-9]+)rpx/) || [])[1];
   assert(!!miniW && !!tabW && miniW === tabW,
     '浮动条与标签栏同宽（' + miniW + ' vs ' + tabW + '）');
+}
+
+console.log('\n【10c】学易栏章节结构');
+{
+  const fsx = require('fs');
+  const pathx = require('path');
+  const MProot = pathx.join(__dirname, '..', 'miniprogram', 'pages', 'learn');
+  const wxml = fsx.readFileSync(pathx.join(MProot, 'learn.wxml'), 'utf8');
+  const js = fsx.readFileSync(pathx.join(MProot, 'learn.js'), 'utf8');
+
+  // 「起卦与卜筮」章节已按要求删除
+  assert(wxml.indexOf('起卦与卜筮') < 0, '学易页已删除「起卦与卜筮」章节');
+  assert(js.indexOf('divination') < 0, '学易页脚本无 divination 相关状态');
+  assert(wxml.indexOf('data-key="divination"') < 0, '学易页无 divination 折叠项');
+
+  // 章节编号须连续（一、二、三…八，共 8 章）
+  const nos = (wxml.match(/lsec-no">([一二三四五六七八九])</g) || [])
+    .map(s => s.replace(/[^一二三四五六七八九]/g, ''));
+  assert(nos.length === 8, `学易共 8 章（实得 ${nos.length}）`);
+  assert(nos.join('') === '一二三四五六七八', '章节编号连续无重复：' + nos.join(''));
+
+  // 太极图：Canvas 绘制（不用 CSS 盒子）
+  assert(wxml.indexOf('canvas type="2d" id="taiji"') >= 0, '太极图用 Canvas 绘制');
+  assert(js.indexOf('taiji.draw(') >= 0, '学易页调用了共享绘制核心 taiji.draw()');
+  assert(js.indexOf("require('../../core/taiji.js')") >= 0, '太极图使用 core 共享版');
 }
 
 console.log('\n【11】导航补充');

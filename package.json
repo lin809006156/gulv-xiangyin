@@ -6,7 +6,7 @@
   "scripts": {
     "sync": "node scripts/sync-core.js",
     "icons": "node scripts/gen-icons.js",
-    "test": "node scripts/verify.js && node scripts/test.js && node scripts/mp-test.js && node scripts/verify-ui.js && node scripts/verify-mini-audio.js",
+    "test": "node scripts/verify.js && node scripts/test.js && node scripts/mp-test.js && node scripts/verify-ui.js && node scripts/verify-mini-audio.js && node scripts/verify-taiji.js",
     "bench": "node scripts/bench.js",
     "build:android": "npm run sync && npm run icons && npx cap sync android && npx cap open android",
     "build:ios": "npm run sync && npm run icons && npx cap sync ios && npx cap open ios",
@@ -14,7 +14,8 @@
     "verify:stage": "node scripts/verify-stage.js",
     "verify:mini-audio": "node scripts/verify-mini-audio.js",
     "verify:ui": "node scripts/verify-ui.js",
-    "verify:all": "node scripts/sync-core.js && node scripts/check-sync.js && node scripts/verify.js && node scripts/verify-library.js && node scripts/verify-timbre.js && node scripts/verify-hexagram.js && node scripts/verify-texts.js && node scripts/verify-generative.js && node scripts/verify-loop.js && node scripts/verify-render.js && node scripts/test.js && node scripts/test-recognize.js && node scripts/mp-test.js && node scripts/verify-ui.js && node scripts/verify-stage.js && node scripts/verify-mini-audio.js"
+    "verify:all": "node scripts/sync-core.js && node scripts/check-sync.js && node scripts/verify.js && node scripts/verify-library.js && node scripts/verify-timbre.js && node scripts/verify-hexagram.js && node scripts/verify-texts.js && node scripts/verify-generative.js && node scripts/verify-loop.js && node scripts/verify-render.js && node scripts/test.js && node scripts/test-recognize.js && node scripts/mp-test.js && node scripts/verify-ui.js && node scripts/verify-stage.js && node scripts/verify-mini-audio.js && node scripts/verify-taiji.js",
+    "verify:taiji": "node scripts/verify-taiji.js"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.0.0"

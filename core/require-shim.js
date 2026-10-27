@@ -25,6 +25,7 @@
     './player.js': 'ICPlayer',
     './recognize.js': 'ICRecognize',
     './viz-stage.js': 'ICVizStage',
+    './taiji.js': 'ICTaiji',
     './bootstrap.js': 'ICBootstrap'
   };
 

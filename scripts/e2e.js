@@ -1216,16 +1216,43 @@ class CDP {
       out.lvChips = document.querySelectorAll('#learnWrap .lv-chip').length;
       out.taijiSvg = !!document.querySelector('#learnWrap .taiji-fig svg');
       out.bookItems = document.querySelectorAll('#learnWrap .book-item').length;
-      out.ancientItems = document.querySelectorAll('#learnWrap .method-item').length;
+      /* 「爻位」章节也有 method-item（动爻/变卦），故不能用条目数判断古法残留，
+         改查古法关键词。 */
+      out.ancientItems = Array.from(document.querySelectorAll('#learnWrap .method-item'))
+        .filter(el => /蓍|龟卜|金钱卦|梅花易数|占戒|大衍|以钱代蓍/.test(el.textContent)).length;
+      out.ancientHasShi = document.querySelector('#learnWrap').textContent.indexOf('大衍之数') >= 0;
+      out.ancientHasQian = document.querySelector('#learnWrap').textContent.indexOf('以钱代蓍') >= 0;
+      out.hasCoinMethod = document.querySelector('#learnWrap').textContent.indexOf('铜钱') >= 0;
+      out.hasGuQian = document.querySelector('#learnWrap').textContent.indexOf('龟卜') >= 0;
       out.ancientHasShi = document.querySelector('#learnWrap').textContent.indexOf('大衍之数') >= 0;
       out.ancientHasQian = document.querySelector('#learnWrap').textContent.indexOf('以钱代蓍') >= 0;
       out.hasCoinMethod = document.querySelector('#learnWrap').textContent.indexOf('铜钱') >= 0;
       out.hasCoinTab = !!document.querySelector('#castTabs .tab[data-mode="coin"]');
       out.castTabs = document.querySelectorAll('#castTabs .tab').length;
+      /* 「起卦与卜筮」章节已按要求删除 —— 断言其**不存在** */
       out.divinationTitle = (() => {
         const cards = Array.from(document.querySelectorAll('#learnWrap .lsec'));
         const hit = cards.find(c => c.querySelector('.lsec-title-text').textContent.indexOf('起卦与卜筮') >= 0);
         return hit ? hit.querySelector('.lsec-title-text').textContent : '';
+      })();
+      /* 学易栏各章标题（用于校验编号连续、无重复） */
+      out.learnTitles = Array.from(document.querySelectorAll('#learnWrap .lsec .lsec-title-text'))
+        .map(el => el.textContent.trim());
+      /* 太极图：网页版英雄区用 Canvas 绘制（不依赖字体字形） */
+      out.taijiCanvas = !!document.querySelector('#lhTaiji');
+      out.taijiCanvasPainted = (() => {
+        const cv = document.querySelector('#lhTaiji');
+        if (!cv) return false;
+        try {
+          const ctx = cv.getContext('2d');
+          const d = ctx.getImageData(0, 0, cv.width, cv.height).data;
+          let dark = 0, light = 0;
+          for (let i = 0; i < d.length; i += 4 * 7) {
+            if (d[i] < 100) dark++;
+            else if (d[i] > 200) light++;
+          }
+          return dark > 10 && light > 10;      // 既有黑又有白 → 画出来了
+        } catch (e) { return false; }
       })();
       // 四象图：矢量爻形（不得依赖字体字形），且少阴上阴下阳、少阳上阳下阴
       out.taijiRects = document.querySelectorAll('#learnWrap .taiji-fig svg rect').length;
@@ -1295,22 +1322,31 @@ class CDP {
   tv.tipDuring.indexOf('试听') >= 0 ? ok(`播放提示：${tv.tipDuring}`) : err(`播放提示异常：${tv.tipDuring}`);
   tv.instFoot ? ok('乐器园脚注含《白虎通》出处') : err('乐器园脚注缺出处');
   tv.learnActive ? ok('切换到学易栏') : err('学易栏切换失败');
-  tv.divinationTitle.indexOf('起卦与卜筮') >= 0
-    ? ok(`「起卦之法」与「古代卜筮方法」已合并为一章：${tv.divinationTitle}`)
-    : err(`章节合并异常：${tv.divinationTitle}`);
-  tv.learnSections >= 8 ? ok(`学易内容 ${tv.learnSections} 个章节（默认折叠）`) : err(`学易章节过少：${tv.learnSections}`);  tv.learnOpenDefault === 0 ? ok('章节默认全部收起，不占空间') : err(`默认有 ${tv.learnOpenDefault} 个章节展开`);
+  tv.divinationTitle === ''
+    ? ok('学易栏已移除「起卦与卜筮」章节')
+    : err(`「起卦与卜筮」章节仍在：${tv.divinationTitle}`);
+  /* 章节编号须连续且不重复（删章后重新编号） */
+  tv.learnTitles && tv.learnTitles.length === tv.learnSections
+    ? ok(`学易 ${tv.learnSections} 章：${tv.learnTitles.join(' / ')}`)
+    : err(`学易章节标题数不符：${tv.learnTitles ? tv.learnTitles.length : 0} vs ${tv.learnSections}`);
+  tv.learnSections === 7 ? ok('学易内容 7 个章节（默认折叠）') : err(`学易章节数异常：${tv.learnSections}`);  tv.learnOpenDefault === 0 ? ok('章节默认全部收起，不占空间') : err(`默认有 ${tv.learnOpenDefault} 个章节展开`);
   (tv.originOpen && tv.originBodyShown) ? ok('点击章节标题可展开正文') : err('章节折叠交互异常');
   tv.hex64Cells === 64 ? ok('六十四卦全表 64 格') : err(`六十四卦数量异常：${tv.hex64Cells}`);
   (tv.triCards >= 8 && tv.fiveCards === 5 && tv.lvChips === 12)
     ? ok(`八卦卡 ${tv.triCards} / 五音卡 ${tv.fiveCards} / 十二律 ${tv.lvChips}`)
     : err(`学易卡片异常：tri=${tv.triCards} five=${tv.fiveCards} lv=${tv.lvChips}`);
   (tv.taijiSvg && tv.bookItems >= 5) ? ok('太极生成图与典籍列表齐备') : err('学易图示或典籍缺失');
-  (tv.ancientHasShi && tv.ancientHasQian && tv.ancientItems >= 5)
-    ? ok(`起卦与卜筮合一（本应用三法 + 古五门，共 ${tv.ancientItems} 条，含蓍占/龟卜/梅花/金钱卦/占戒）`)
-    : err(`起卦与卜筮内容缺失（shi=${tv.ancientHasShi} qian=${tv.ancientHasQian} items=${tv.ancientItems}）`);
-  (tv.hasCoinMethod && !tv.hasCoinTab && tv.castTabs === 3)
-    ? ok('铜钱法仅作文献保留；起卦栏为三法（铜钱卦已移除）')
+  /* 「起卦与卜筮」章节已删 → 相关的古法条目（蓍占/龟卜/金钱卦）不再出现在学易栏 */
+  (!tv.ancientHasShi && !tv.ancientHasQian && !tv.hasGuQian && tv.ancientItems === 0)
+    ? ok('古法条目（蓍占/龟卜/金钱卦）已随章节一并移除')
+    : err(`古法条目残留（shi=${tv.ancientHasShi} qian=${tv.ancientHasQian} gu=${tv.hasGuQian} items=${tv.ancientItems}）`);
+  (!tv.hasCoinMethod && !tv.hasCoinTab && tv.castTabs === 3)
+    ? ok('起卦栏仍为三法，无铜钱卦')
     : err(`铜钱卦残留检查失败（method=${tv.hasCoinMethod} tab=${tv.hasCoinTab} tabs=${tv.castTabs}）`);
+  /* 太极图：Canvas 绘制且确有黑白像素（不是空白画布） */
+  (tv.taijiCanvas && tv.taijiCanvasPainted)
+    ? ok('太极图用 Canvas 绘制且已出图')
+    : err(`太极图 Canvas 异常（canvas=${tv.taijiCanvas} painted=${tv.taijiCanvasPainted}）`);
   tv.taijiRects >= 15 ? ok(`四象图用矢量爻形绘制（${tv.taijiRects} 个矩形：两仪 3 + 四象 12，不依赖字体字形）`) : err(`四象图矩形过少：${tv.taijiRects}`);
   (tv.finderOpen && tv.finderDetail.indexOf('否') >= 0 && tv.finderDetail.indexOf('乾') >= 0 && tv.finderDetail.indexOf('坤') >= 0)
     ? ok('按上下卦找卦：上乾下坤 → 天地否，详情自动展开')

@@ -1102,11 +1102,12 @@ body {
   text-align: center;
   padding: 30px 18px 26px;
 }
+/* 太极图：Canvas 绘制（core/taiji.js），不依赖字体字形 */
 .learn-hero .lh-sym {
-  font-size: 54px;
-  line-height: 1;
-  margin-bottom: 12px;
-  font-family: var(--font-serif);
+  display: block;
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 12px;
 }
 .learn-hero h2 {
   font-size: 21px;

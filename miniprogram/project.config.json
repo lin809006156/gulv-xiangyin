@@ -8,7 +8,7 @@
       },
       {
         "type": "file",
-        "value": "开发与发布说明.md"
+        "value": "DEPLOY.md"
       }
     ],
     "include": []

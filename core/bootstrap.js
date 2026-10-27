@@ -121,9 +121,25 @@ function loadRecognize() {
   throw new Error('core/recognize.js 未加载');
 }
 
+/**
+ * 取得空后端（Node 环境与未注入后端时用）
+ * ---------------------------------------------------------------
+ * 后端契约见 core/backend.js。
+ */
+function createNullBackend() {
+  if (IS_NODE || IS_MINIPROGRAM) {
+    return require('./backend.js').createNullBackend();
+  }
+  if (typeof window !== 'undefined' && window.ICBackend) {
+    return window.ICBackend.createNullBackend();
+  }
+  throw new Error('core/backend.js 未加载');
+}
+
 const API = {
   IS_NODE, IS_MINIPROGRAM,
-  loadClassics, loadData, loadHexagram, loadMusic, loadRender, loadPlayer, loadRecognize
+  loadClassics, loadData, loadHexagram, loadMusic, loadRender, loadPlayer, loadRecognize,
+  createNullBackend
 };
 
 /* 导出 */

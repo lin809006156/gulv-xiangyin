@@ -1,12 +1,13 @@
 {
   "name": "gulv-xiangyin",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "古律象音 · 每日观象起卦，为每一卦生成一段心音",
   "private": true,
   "scripts": {
     "sync": "node scripts/sync-core.js",
+    "postinstall": "node scripts/sync-core.js",
     "icons": "node scripts/gen-icons.js",
-    "test": "node scripts/verify.js && node scripts/test.js && node scripts/mp-test.js && node scripts/verify-ui.js && node scripts/verify-mini-audio.js && node scripts/verify-taiji.js && node scripts/verify-package.js",
+    "test": "node scripts/sync-core.js && node scripts/verify.js && node scripts/test.js && node scripts/mp-test.js && node scripts/verify-ui.js && node scripts/verify-mini-audio.js && node scripts/verify-taiji.js && node scripts/verify-package.js && node scripts/verify-layering.js",
     "bench": "node scripts/bench.js",
     "build:android": "npm run sync && npm run icons && npx cap sync android && npx cap open android",
     "build:ios": "npm run sync && npm run icons && npx cap sync ios && npx cap open ios",
@@ -14,7 +15,7 @@
     "verify:stage": "node scripts/verify-stage.js",
     "verify:mini-audio": "node scripts/verify-mini-audio.js",
     "verify:ui": "node scripts/verify-ui.js",
-    "verify:all": "node scripts/sync-core.js && node scripts/check-sync.js && node scripts/verify.js && node scripts/verify-library.js && node scripts/verify-timbre.js && node scripts/verify-hexagram.js && node scripts/verify-texts.js && node scripts/verify-generative.js && node scripts/verify-loop.js && node scripts/verify-render.js && node scripts/test.js && node scripts/test-recognize.js && node scripts/mp-test.js && node scripts/verify-ui.js && node scripts/verify-stage.js && node scripts/verify-mini-audio.js && node scripts/verify-taiji.js && node scripts/verify-package.js",
+    "verify:all": "node scripts/sync-core.js && node scripts/check-sync.js && node scripts/verify.js && node scripts/verify-library.js && node scripts/verify-timbre.js && node scripts/verify-hexagram.js && node scripts/verify-texts.js && node scripts/verify-generative.js && node scripts/verify-loop.js && node scripts/verify-render.js && node scripts/test.js && node scripts/test-recognize.js && node scripts/mp-test.js && node scripts/verify-ui.js && node scripts/verify-stage.js && node scripts/verify-mini-audio.js && node scripts/verify-taiji.js && node scripts/verify-package.js && node scripts/verify-layering.js && node scripts/e2e.js",
     "verify:taiji": "node scripts/verify-taiji.js",
     "verify:package": "node scripts/verify-package.js"
   },

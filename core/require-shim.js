@@ -16,6 +16,7 @@
 
   // 模块路径 → 全局变量名
   const MAP = {
+    './backend.js': 'ICBackend',
     './classics.js': 'ICClassics',
     './data.js': 'ICData',
     './hexagram-texts.js': 'ICTexts',

@@ -5,6 +5,11 @@
  *   web/       —— 网页版（Capacitor APP 也用它）
  *   miniprogram/core/ —— 微信小程序
  *
+ * 注意：平台专属的播放后端不在 core/ 里，故不在本清单内：
+ *   web/js/audio-backend-web.js          —— 只在网页端
+ *   miniprogram/utils/audio-backend-mini.js —— 只在小程序端
+ * 这正是「改小程序不会牵动网页端」的结构保证。
+ *
  * 用法：node scripts/sync-core.js
  */
 'use strict';
@@ -23,6 +28,7 @@ const TARGETS = [
  * 同步顺序即依赖顺序，勿随意调整：
  *   require-shim  浏览器里注入 require（必须最先）
  *   bootstrap    提供 loadXxx 垫片
+ *   backend      播放后端契约与空后端
  *   classics     文献依据的单一真相源（不依赖其他 core 模块）
  *   data         依赖 classics，必须在其后
  *   hexagram-texts 六十四卦详解（原文 + 京房八宫纳甲），依赖 data 的卦序
@@ -31,6 +37,7 @@ const TARGETS = [
 const FILES = [
   'require-shim.js',
   'bootstrap.js',
+  'backend.js',
   'classics.js',
   'data.js',
   'hexagram-texts.js',

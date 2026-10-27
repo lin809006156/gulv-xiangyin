@@ -24,10 +24,17 @@
 ## 二、核心设计：一次编写，三端同源
 
 ```
-core/          ← 唯一真相源（卦象 / 文献 / 作曲 / 合成 / 渲染）
-  ├─→ web/core/          （由 scripts/sync-core.js 同步）
+core/          ← 唯一真相源（卦象 / 文献 / 作曲 / 合成 / 渲染 / 播放引擎）
+  ├─→ web/core/          （由 scripts/sync-core.js 同步，构建时生成，不入版本库）
   ├─→ miniprogram/core/  （同上）
   └─→ android/app/src/main/assets/public/  （由 npx cap sync 同步）
+```
+
+平台专属的播放实现不进 `core/`，各归其位（详见「工程结构」章）：
+
+```
+web/js/audio-backend-web.js          ← Web Audio（网页版 + APP）
+miniprogram/utils/audio-backend-mini.js ← InnerAudioContext（小程序）
 ```
 
 `core/` 分层如下，各层职责单一、可单独验证：
@@ -69,7 +76,7 @@ core/          ← 唯一真相源（卦象 / 文献 / 作曲 / 合成 / 渲染�
 
 ### 4.1 音色即五音的实质维度
 
-角、徵、宫、商、羽不只对应音高，各有专属音色（`core/timbre.js`）。
+角、徵、宫、商、羽不只对应音高，各有专属音色（物理频谱参数见 `core/render.js` 的 `VOICE_SPECS`）。
 以 Goertzel 频带分析量化验证：有音高的乐器上，五音清浊单调递增（《乐记》疏：宫至浊 → 羽最清），
 相对提升 ≥ 25% 且绝对 ≥ 2.5pp。
 
@@ -128,7 +135,7 @@ core/          ← 唯一真相源（卦象 / 文献 / 作曲 / 合成 / 渲染�
 - **浮动播放栏**：播放时自底部标签栏上方滑出的同轴胶囊，含曲名、播放/暂停、循环、音量，
   与音乐栏双向同步。
 - **液态按压动效**：触点高光 + 涟漪环 + 带过冲的回弹，只动 transform / opacity / filter。
-- **学易栏**：易之生成、八卦速查、六十四卦全表、按上下卦找卦、起卦与卜筮、五音十二律、
+- **学易栏**：易之生成、八卦速查、六十四卦全表、按上下卦找卦、五音十二律、
   爻位与变卦、八音配卦、所据典籍。
 
 ---
@@ -137,25 +144,58 @@ core/          ← 唯一真相源（卦象 / 文献 / 作曲 / 合成 / 渲染�
 
 ```
 hexagram-music/
-├── core/                 # 唯一真相源
-├── web/                  # PWA 网页版
-├── miniprogram/          # 微信小程序
-│   └── pages/            #   起卦 / 详情 / 卦历
-├── android/              # Capacitor 壳工程
-├── scripts/              # 同步、校验、端到端测试、构建脚本
-├── lab/                  # 方案对比台（开发用）
+├── core/                    # 唯一真相源（平台无关的共享逻辑）
+│   ├── backend.js           #   播放后端契约 + 空后端（Node 用）
+│   ├── player.js            #   播放引擎：状态机 / 循环 / 编曲编排（无平台代码）
+│   └── ...                  #   卦象 / 文献 / 作曲 / 渲染 / 波形台 / 太极图
+├── web/                     # PWA 网页版（Capacitor APP 也用它）
+│   └── js/audio-backend-web.js   #   网页端专属后端：Web Audio
+├── miniprogram/             # 微信小程序
+│   ├── utils/audio-backend-mini.js  # 小程序端专属后端：InnerAudioContext
+│   └── pages/               #   起卦 / 详情 / 卦历 / 音乐 / 学易
+├── android/                 # Capacitor 壳工程
+├── scripts/                 # 同步、校验、端到端测试、构建脚本
+├── brand/                   # 图标源图（不进代码包）
 ├── capacitor.config.json
 └── package.json
 ```
 
-**修改 `core/` 后必须执行 `node scripts/sync-core.js`**，保持 `web/core/` 与 `miniprogram/core/` 一致。
+### 平台代码各归其位
+
+这是本项目的核心工程约定：**改一端不牵动另一端**。
+
+| 代码类型 | 放哪 | 改动影响 |
+| -------- | ---- | -------- |
+| 共享逻辑（卦象、文献、作曲、渲染、波形台） | `core/` | 两端同时生效（应有之义） |
+| 网页端专属（Web Audio、实时音层总线、Worker 渲染） | `web/js/audio-backend-web.js` | 只影响网页端 |
+| 小程序端专属（WAV 落盘、InnerAudioContext） | `miniprogram/utils/audio-backend-mini.js` | 只影响小程序端 |
+
+`core/player.js` 只做业务编排（起卦 → 作曲 → 交给后端出声 → 回报状态），
+「怎么出声」由各端注入的后端实现（契约见 `core/backend.js`）。
+`scripts/verify-layering.js` 自动检查这条约定不被破坏：
+
+- `core/` 下不得出现任何平台 API（Web Audio / `wx.*`）
+- `core/player.js` 的平台分支不得超过 1 处（仅 Node 守卫）
+- 平台后端文件必须各在其位，且不得出现在 `core/` 里
+
+### core 副本的生成方式
+
+`core/` 是唯一真相源，`web/core/` 与 `miniprogram/core/` 是**构建时生成**的副本，
+**不入版本库**（`.gitignore` 已排除）。因此：
+
+- 克隆后先跑一次 `npm install`（`postinstall` 自动同步）或 `npm run sync`
+- `npm run check:sync` 校验三处副本一致
+- 提交前跑 `npm test`（首步即自动同步）
+
+这样仓库里只存一份源码，git diff 干净，不会出现副本漂移。
 
 ---
 
 ## 八、构建
 
 ```bash
-npm run sync                  # 同步 core 到 web/ 与 miniprogram/
+npm install                   # 自动同步 core 到 web/ 与 miniprogram/
+npm run sync                  # （可选）手动同步
 node scripts/gen-icons.js     # 生成各尺寸图标
 npx cap sync android          # 同步 web 资源进原生工程
 cd android && ./gradlew assembleDebug
@@ -180,6 +220,7 @@ cd android && ./gradlew assembleDebug
 | `test.js` / `test-recognize.js` | 核心与物象归一 | 全通过 |
 | `verify-stage.js` | 波形台共享核心：小程序式环境 + 真机尺寸 + 旧基础库降级 | 11 项 |
 | `verify-mini-audio.js` | 小程序播放链路：写盘 + InnerAudioContext，暂停/继续，不得触碰 Web Audio | 24 项 |
+| `verify-layering.js` | 分层结构：core/ 无平台 API、后端各在其位、平台分支数上限 | 15 项 |
 | `verify-ui.js` | 小程序界面一致性静态检查（模板/事件/样式/图标条件/对齐/留白/状态语义） | 69 项 |
 | `verify-taiji.js` | 太极图绘制校验：像素判据确认是 S 形阴阳鱼而非上下平分 | 7 项 |
 | `verify-package.js` | 小程序代码包体积：静态资源不超 200K、ignore 配置有效、关键文件未误排除 | 17 项 |

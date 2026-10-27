@@ -12,6 +12,73 @@
 
 ---
 
+## v1.4.0 — 2026-10-27
+
+**工程结构重构**：三端同仓的布局保留，但把「平台专属代码」从共享核心里彻底剥离，
+达到「**改小程序不动网页端、改网页端不动小程序端**」。
+
+起因是实际踩到的坑：此前想只改小程序，因播放逻辑与网页端混写在 `core/player.js` 里
+（20 处 `IS_MINIPROGRAM` 分支），一改就连带把网页端也改了 —— 共享副本机制把
+平台差异放大了。
+
+### 一、播放后端分层（核心改动）
+
+- 新增 **`core/backend.js`**：定义播放后端的契约（能力声明 + 十余个方法 + hooks 回调）。
+- 新增 **`web/js/audio-backend-web.js`**：网页端专属后端 —— Web Audio 音频图、
+  实时音层总线（疗愈频率 + 五层自然音）、后台 Worker 渲染、即兴连播的叠尾调度。
+- 新增 **`miniprogram/utils/audio-backend-mini.js`**：小程序端专属后端 ——
+  WAV 落盘 + InnerAudioContext 播放、落盘失败降级 `wx.createWebAudioContext()`、
+  轮次顺序相接。
+- **`core/player.js` 瘦身**：1500 行 → 约 950 行，只做业务编排
+  （起卦 → 作曲 → 交给后端出声 → 回报状态），**不再含任何平台 API**。
+  平台分支从 20 处降到 1 处（仅 Node 守卫：Node 只渲染不播放）。
+- 两端各自注入自己的后端：`web/js/app.js` 传 `new WebBackend()`，
+  `miniprogram/app.js` 传 `new MiniBackend()`。
+
+### 二、副本改为构建时生成
+
+- `web/core/` 与 `miniprogram/core/` 是**构建产物**，**不再入版本库**
+  （`.gitignore` 排除，`git rm --cached` 取消跟踪）。仓库里只存一份源码，
+  git diff 干净，杜绝副本漂移。
+- `package.json` 加 `postinstall` 自动同步；`npm test` 首步亦自动同步。
+- `npm run check:sync` 保留，校验三处副本一致。
+
+### 三、目录清理与命名
+
+- 删除已废弃的 `unity/`（Unity 试验品，15 文件）、`lab/`（调参对比台，3 文件）
+  与两个 Chrome 调试临时目录；历史版本仍可在 git log 中找回。
+- `android/` 下删除 2 个 Capacitor 模板测试类；**其余 51 个文件保留**
+  （Capacitor 官方要求提交 `android/` 目录本身，图标、`MainActivity.java`、
+  `strings.xml`、gradle wrapper 均为构建必需，删则 APK 无法编译）。
+- `miniprogram/开发与发布说明.md` → `miniprogram/DEPLOY.md`（避免中文文件名
+  在 git 中被转义），`project.config.json` 与校验脚本同步更新。
+
+### 四、新增分层自检
+
+- 新增 **`scripts/verify-layering.js`**（15 项）：自动检查 `core/` 下无任何平台 API
+  （Web Audio / `wx.*`）、`core/player.js` 平台分支数不超阈值、
+  后端文件各在其位且不出现在 `core/` 里 —— 防止平台代码将来回流。
+- 新增 **`core/backend.js`** 登记到三处：`scripts/sync-core.js` 的 `FILES`、
+  `web/index.html` 的 `<script>` 标签、`core/require-shim.js` 的 `MAP`。
+
+### 五、测试
+
+- `verify-generative.js` 第 13 节改为直接测网页端后端（音层总线已随之迁移）。
+- `verify-mini-audio.js` 改为加载并注入小程序端后端。
+- `verify-ui.js` 的两项小程序端源码检查改查 `utils/audio-backend-mini.js`。
+- 全量回归通过：e2e **158** 项、mp-test 111、verify-stage 11、verify-ui 71、
+  verify-mini-audio 24、verify-taiji 7、verify-package 17、verify-layering 15，
+  其余各套件全绿（含真实浏览器播放 `running@0.42`）。
+
+### 六、文档
+
+- README 新增「平台代码各归其位」与「core 副本的生成方式」两节；
+  修正过时引用（`core/timbre.js` → `core/render.js` 的 `VOICE_SPECS`；
+  学易栏章节删去「起卦与卜筮」）。
+- `miniprogram/DEPLOY.md` 新增「播放后端与网页版的分工」章，章节重新编号。
+
+---
+
 ## v1.3.0 — 2026-10-27
 
 微信小程序端**全量对齐网页版**：三栏结构、波形台、学易栏、浮动播放条、玻璃视觉；

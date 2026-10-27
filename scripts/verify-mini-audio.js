@@ -101,11 +101,16 @@ function loadAsMiniprogram(relPath) {
   assert(P.IS_MINIPROGRAM === true, '环境判定为小程序（IS_MINIPROGRAM）');
   assert(P.IS_NODE === false, '环境判定非 Node（IS_NODE）');
 
+  /* 小程序端专属的播放后端（InnerAudioContext + WAV 落盘）。
+     它只存在于 miniprogram/utils/ —— 网页端有自己的一份，互不干涉。 */
+  const { MiniBackend } = loadAsMiniprogram('utils/audio-backend-mini.js');
+
   const D = require(path.join(ROOT, 'core/data.js'));
   const hex = D.HEXAGRAMS[0];
   const cfg = D.deriveMusicConfig(hex);
 
-  const pl = new P.Player();
+  const backend = new MiniBackend();
+  const pl = new P.Player({ backend });
   const errors = [];
   pl.onError = (m) => errors.push(String(m));
 

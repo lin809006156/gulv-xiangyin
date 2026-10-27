@@ -215,13 +215,19 @@ function checkPlaybackSemantics() {
     'utils/miniplayer.js：支持暂停与继续');
   assert(/if \(p\.pause\(\)\)/.test(mini) && /if \(p\.resume\(\)\)/.test(mini),
     'utils/miniplayer.js：暂停/继续检查返回值（失败不谎报状态）');
-  // 小程序端循环开关必须真的生效
-  const miniEnded = (player.match(/inner\.onEnded\(\(\) => \{[\s\S]*?\}\);/) || [''])[0];
-  assert(miniEnded.indexOf('this.loop') >= 0,
-    'core/player.js：小程序端续播受循环开关控制');
+
+  /* 小程序端专属实现已搬到 utils/audio-backend-mini.js，
+     故这两项检查的对象随之改变（平台代码各归其位）。 */
+  const backend = read('utils/audio-backend-mini.js');
+  assert(backend.length > 0, 'utils/audio-backend-mini.js：小程序端播放后端存在');
+  // 小程序端循环开关必须真的生效：引擎的续播判断读的是 this.loop
+  assert(/if \(!this\.loop\)/.test(player),
+    'core/player.js：小程序端续播受循环开关控制（_onRoundEnded 判 this.loop）');
+  assert(/isLoop:\s*\(\)\s*=>\s*self\.loop/.test(player),
+    'core/player.js：向后端暴露循环开关');
   // 换 inner 时须继承音量
-  assert(/inner\.volume = this\._volume/.test(player),
-    'core/player.js：新建音频源继承当前音量');
+  assert(/inner\.volume = this\._volume/.test(backend),
+    'utils/audio-backend-mini.js：新建音频源继承当前音量');
 }
 
 /* ---------- 主流程 ---------- */

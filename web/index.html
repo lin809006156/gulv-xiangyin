@@ -506,11 +506,15 @@
 <!-- 加载顺序要求：
      1. require-shim.js —— 注入浏览器端 require 垫子（必须最先）
      2. bootstrap.js   —— 跨端加载器
-     3. classics.js    —— 文献依据的单一真相源（不依赖其他 core 模块）
-     4. data.js        —— 依赖 classics.js，导出 window.ICData
-     5. hexagram.js / music.js / render.js / player.js / recognize.js -->
+     3. backend.js     —— 播放后端契约与空后端
+     4. classics.js    —— 文献依据的单一真相源（不依赖其他 core 模块）
+     5. data.js        —— 依赖 classics.js，导出 window.ICData
+     6. hexagram.js / music.js / render.js / player.js / recognize.js
+     7. audio-backend-web.js —— 网页端专属播放后端（Web Audio），
+        只在网页端存在；小程序端另有自己的后端，故改一边不牵动另一边 -->
 <script src="core/require-shim.js"></script>
 <script src="core/bootstrap.js"></script>
+<script src="core/backend.js"></script>
 <script src="core/classics.js"></script>
 <script src="core/data.js"></script>
 <script src="core/hexagram-texts.js"></script>
@@ -521,6 +525,7 @@
 <script src="core/recognize.js"></script>
 <script src="core/viz-stage.js"></script>
 <script src="core/taiji.js"></script>
+<script src="js/audio-backend-web.js"></script>
 <script src="js/learn.js"></script>
 <script src="js/app.js"></script>
 </body>

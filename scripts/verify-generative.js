@@ -462,24 +462,32 @@ console.log('\n=== 13. 实时音层总线（开关即时生效） ===');
   global.AudioContext = MockCtx;
 
   try {
-    const p = new P.Player({});
-    p._ensureCtx();                        // 触发音频图与音层总线建���
-    p._ensureAmbientNodes();
-    const N = p._ambNodes;
+    /* 实时音层总线是**网页端专属**的实现，现已搬到 web/js/audio-backend-web.js。
+       本节直接加载该后端来验证 —— 这也正是「平台代码各归其位」的体现：
+       core/player.js 里已无任何 Web Audio 细节。 */
+    const { WebBackend } = require('../web/js/audio-backend-web.js');
+    const backend = new WebBackend();
+    const p = new P.Player({ backend });
+    if (backend.liveAmbient === true && backend.worker === true) {
+      ok('网页端后端声明能力：实时音层总线 + 后台 Worker 渲染');
+    } else err('网页端后端能力声明异常');
+    backend.ensureCtx();                        // 触发音频图与音层总线建���
+    backend._ensureAmbientNodes();
+    const N = backend._ambNodes;
     const nodesOk = !!(N && N.solGain && N.solOsc.length === 2 &&
       ['rain', 'birds', 'fire', 'wind', 'stream'].every((k) => N.nature[k]));
     if (nodesOk) ok('音层总线节点齐备：疗愈双振荡器 + 五层自然音（噪声源经各层专属滤波）');
     else err('音层总线节点缺失');
 
     // 关 → 各层增益为 0（不占用输出）
-    p._applyLiveAmbient({ solfeggio: null, nature: {}, level: 1 }, 0);
+    backend.applyLiveAmbient({ solfeggio: null, nature: {}, level: 1 }, 0);
     const zeroOk = N.solGain.gain._target === 0 &&
       Object.keys(N.nature).every((k) => N.nature[k].gain.gain._target === 0);
     if (zeroOk) ok('全部关闭时各层增益为 0（与无音层等价）');
     else err('关闭后仍有层在发声');
 
     // 开疗愈 + 三层自然 → 增益为正
-    p._applyLiveAmbient({
+    backend.applyLiveAmbient({
       solfeggio: { freq: 528, level: 0.09 },
       nature: { rain: true, birds: true, fire: false, wind: false, stream: false },
       level: 1
@@ -493,7 +501,7 @@ console.log('\n=== 13. 实时音层总线（开关即时生效） ===');
     } else err('音层开关未即时反映到增益');
 
     // 频率切换 → 振荡器频率跟随
-    p._applyLiveAmbient({ solfeggio: { freq: 741, level: 0.09 }, nature: {}, level: 1 }, 0.3);
+    backend.applyLiveAmbient({ solfeggio: { freq: 741, level: 0.09 }, nature: {}, level: 1 }, 0.3);
     const f741 = N.solOsc[0].osc.frequency._target;
     const f371 = N.solOsc[1].osc.frequency._target;
     if (Math.abs(f741 - 741) < 0.5 && Math.abs(f371 - 370.5) < 0.5) {
@@ -501,16 +509,16 @@ console.log('\n=== 13. 实时音层总线（开关即时生效） ===');
     } else err(`频率未跟随：${f741} / ${f371}`);
 
     // 总音量 → 各层同比缩放，且不喧宾夺主（单层远小于主体）
-    p._applyLiveAmbient({ solfeggio: null, nature: { rain: true }, level: 1 }, 0);
+    backend.applyLiveAmbient({ solfeggio: null, nature: { rain: true }, level: 1 }, 0);
     const base = N.nature.rain.gain.gain._target;
-    p._applyLiveAmbient({ solfeggio: null, nature: { rain: true }, level: 0.5 }, 0);
+    backend.applyLiveAmbient({ solfeggio: null, nature: { rain: true }, level: 0.5 }, 0);
     const half = N.nature.rain.gain.gain._target;
     if (base > 0 && Math.abs(half - base * 0.5) < 1e-6) {
       ok(`总音量滑条等比缩放各层（${base.toFixed(4)} → ${half.toFixed(4)}）`);
     } else err(`总音量未等比生效：${base} → ${half}`);
 
     // 淡出：停止播放后所有层归零
-    p._silenceAmbient(1.2);
+    backend.silenceLiveAmbient(1.2);
     const silenced = N.solGain.gain._target === 0 &&
       Object.keys(N.nature).every((k) => N.nature[k].gain.gain._target === 0);
     if (silenced) ok('停止播放 → 音层随之淡出（与音乐渐弱同步）');
@@ -518,7 +526,7 @@ console.log('\n=== 13. 实时音层总线（开关即时生效） ===');
 
     // 分端策略：浏览器走实时总线，Node / 小程序把音层烘进 PCM
     //（保证导出 WAV 与小程序端听感一致）
-    if (P.USE_LIVE_AMBIENT === false) {
+    if (p.backend.liveAmbient === false) {
       const hex = D.getHexagram(11);
       const cfg = D.deriveMusicConfig(hex);
       const score = M.composeNotes(hex, cfg, null);

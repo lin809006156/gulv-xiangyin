@@ -18,11 +18,20 @@ ios/App/Pods/
 ios/App/build/
 ios/App/output/
 
+# 共享核心的构建副本（唯一真相源在 core/，由 npm run sync 分发）
+# 仓库里只存 core/ 一份源码，避免三份副本漂移
+web/core/
+miniprogram/core/
+
 # 运行时与测试产物（可由脚本重新生成）
 screenshots/
 shots/
 samples/
 *.log
+
+# 已废弃的试验目录（历史版本仍可在 git log 中找回）
+unity/
+lab/
 
 # 本地私有配置（微信开发者工具的个人设置）
 miniprogram/project.private.config.json

@@ -13,6 +13,7 @@ const D = require('./core/data.js');
 const H = require('./core/hexagram.js');
 const M = require('./core/music.js');
 const P = require('./core/player.js');
+const { MiniBackend } = require('./utils/audio-backend-mini.js');
 
 /**
  * 取当前页面栈顶
@@ -59,6 +60,10 @@ App({
     }
     // 全局共享一个播放引擎，跨页面保持播放连续性
     this.globalData.player = new P.Player({
+      // 平台后端：小程序端专属的 InnerAudioContext 实现
+      // （utils/audio-backend-mini.js）。引擎（core/player.js）本身不含
+      // 任何平台代码，故改网页端播放逻辑不会牵动小程序端，反之亦然。
+      backend: new MiniBackend(),
       onProgress: (elapsed, duration) => {
         const top = topPage();
         if (top && top.onPlayerProgress) top.onPlayerProgress(elapsed, duration);

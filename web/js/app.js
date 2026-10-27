@@ -106,6 +106,10 @@
    * =============================================================== */
 
   const player = new P.Player({
+    // 平台后端：网页端专属的 Web Audio 实现（js/audio-backend-web.js）。
+    // 引擎（core/player.js）本身不含任何平台代码，故改小程序播放逻辑
+    // 不会牵动网页端，反之亦然。
+    backend: new window.ICWebBackend.WebBackend(),
     // 供调试与端到端测试读取播放器内部状态（音层总线、音频图）
     onEnd: () => {
       // 即兴连播没有「结束」；会走到这里的是乐器试听

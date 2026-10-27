@@ -1,7 +1,16 @@
 {
   "description": "古律象音 · 每日观象起卦小程序",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "assets"
+      },
+      {
+        "type": "file",
+        "value": "开发与发布说明.md"
+      }
+    ],
     "include": []
   },
   "setting": {

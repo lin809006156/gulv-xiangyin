@@ -182,6 +182,7 @@ cd android && ./gradlew assembleDebug
 | `verify-mini-audio.js` | 小程序播放链路：写盘 + InnerAudioContext，暂停/继续，不得触碰 Web Audio | 24 项 |
 | `verify-ui.js` | 小程序界面一致性静态检查（模板/事件/样式/图标条件/对齐/留白/状态语义） | 69 项 |
 | `verify-taiji.js` | 太极图绘制校验：像素判据确认是 S 形阴阳鱼而非上下平分 | 7 项 |
+| `verify-package.js` | 小程序代码包体积：静态资源不超 200K、ignore 配置有效、关键文件未误排除 | 17 项 |
 | `mp-test.js` | 小程序运行时模拟（含浮动条一致性） | 103 项 |
 | `e2e.js` | 真实浏览器 + 真实出声：交互、渲染、方向、动效 | 156 项 |
 

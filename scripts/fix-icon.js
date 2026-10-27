@@ -4,8 +4,8 @@
  * AI 生成的图标右下角带「AI生成 WORKBUDDY>」水印，正式发布必须去掉。
  * 水印位于纯色背景角落，用同图底部干净区域的中位色精确修补，
  * 再双线性缩放到各端所需尺寸：
- *   miniprogram/assets/icon.png     1024（源）
- *   miniprogram/assets/icon-144.png 144（微信小程序上传规格）
+ *   brand/icon-1024.png             1024（源；**放在仓库根，不进任何端的代码包**）
+ *   miniprogram/assets/icon-144.png 144（微信小程序上传规格；已配置 packOptions 忽略，不打包）
  *   web/assets/icon-512.png         512（PWA）
  *   web/assets/icon-192.png         192（PWA）
  *   web/assets/icon-180.png         180（apple-touch-icon）
@@ -219,7 +219,7 @@ console.log(`已修补 ${patched} 像素（右下 ${W - patchX0}x${H - patchY0} 
 
 /* 4) 输出各尺寸 */
 const outputs = [
-  { file: path.join(ROOT, 'miniprogram', 'assets', 'icon.png'), size: 1024 },
+  { file: path.join(ROOT, 'brand', 'icon-1024.png'), size: 1024 },
   { file: path.join(ROOT, 'miniprogram', 'assets', 'icon-144.png'), size: 144 },
   { file: path.join(ROOT, 'web', 'assets', 'icon-512.png'), size: 512 },
   { file: path.join(ROOT, 'web', 'assets', 'icon-192.png'), size: 192 },

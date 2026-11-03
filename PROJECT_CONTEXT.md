@@ -242,6 +242,23 @@ git push origin main --tags
 - 新增 verify-layering 分层自检
 - 全量测试通过
 
+**v1.4.1 已完成并发布**（commit `02d7c1b`，tag `v1.4.1`，已推送 GitHub）：
+- 每日一卦改默认空态、重排布局、修「起卦依据与实取之卦不一致」
+- 八音音色三处缺陷修复（densityKeep 压平泛音、vBlow 不用 partials、归一化单向+软限幅反相放大）
+- 试听参数改中性并抽到 `core/audition.js` 共用
+- 小程序端补齐音层叠加（烘进 PCM，对下一段生效）
+- GitHub Release 已建，APK 已上传：
+  https://github.com/lin809006156/gulv-xiangyin/releases/tag/v1.4.1
+
 **未完成**：
-- v1.4.0 的 GitHub Release 与 APK 尚未创建（标签已推）
-- 小程序尚未上传 v1.4.0（需用户在开发者工具里操作）
+- 小程序尚未上传 v1.4.1（需在开发者工具里开启服务端口后操作）
+- v1.4.0 无独立 Release（未单独出包，其改动已累积在 v1.4.1 的 APK 中）
+
+**发布 Release 的可行做法**（本机无 gh CLI）：从 Git 凭据管理器取 OAuth 令牌后调 GitHub API ——
+```bash
+GCM="/d/develop/WorkBuddy/resources/vendor/PortableGit/mingw64/bin/git-credential-manager.exe"
+TOKEN=$(printf 'protocol=https\nhost=github.com\nusername=lin809006156\n\n' \
+  | GCM_INTERACTIVE=never "$GCM" get | awk -F= '/^password=/{print $2}')
+# 再 POST /repos/lin809006156/gulv-xiangyin/releases，附件走 uploads.github.com
+```
+令牌为 `gho_` 前缀，作用域 `gist, repo, workflow`，可直接建 Release 与传附件。

@@ -245,7 +245,20 @@ git tag -a v1.x.0 -m "..."
 git push origin main --tags
 ```
 
-**APK**：`cd android && ./gradlew assembleDebug` → `android/app/build/outputs/apk/debug/`
+**APK**：本机 JDK 不在 PATH（`JAVA_HOME` 为空、`java` 命令不存在），
+**必须显式指定**，否则 `gradlew` 直接报 `JAVA_HOME is not set`：
+
+```bash
+export JAVA_HOME="C:/Users/图书馆五楼/.workbuddy/tools/jdk17"
+cd android && ./gradlew assembleDebug      # 约 1 分钟
+# 产物 android/app/build/outputs/apk/debug/app-debug.apk
+cp android/app/build/outputs/apk/debug/app-debug.apk \
+   dist/gulv-xiangyin-v<版本>-debug.apk
+```
+
+JDK 17 在 `~/.workbuddy/tools/jdk17`（随 WorkBuddy 工具链装的），
+Android SDK 在 `~/.workbuddy/tools/android-sdk`（见 `android/local.properties`）。
+**搜的时候别只搜 4 层目录** —— 它在第 6 层，浅搜会误判成「本机没有 Java」。
 
 **小程序上传**：`D:\develop\微信web开发者工具\cli.bat upload --project <路径> -v <版本> -d <描述>`
 （须先在工具里手动开启「设置 → 安全设置 → 服务端口」，CLI 才可用）
@@ -271,9 +284,18 @@ git push origin main --tags
 - GitHub Release 已建，APK 已上传：
   https://github.com/lin809006156/gulv-xiangyin/releases/tag/v1.4.1
 
+**v1.4.2 已完成并发布**（commit `27423ac`，tag `v1.4.2`，已推送 GitHub）：
+- 起卦页布局改到**小程序端**（v1.4.1 只改了网页端）；两端自动取卦均已取消
+- 音层电平修到听得见（新增 `NATURE_TRIM` 按整体响度校准；网页端实时配方与离线同源）
+- 箫/埙/管按管型重设（埙为闭管、只含奇次谐波，此前注释写反）
+- 新增 `verify-ambient.js`；`verify-timbre` 1.5 补感知响度判据
+- GitHub Release 已建，APK 已上传：
+  https://github.com/lin809006156/gulv-xiangyin/releases/tag/v1.4.2
+- 小程序 v1.4.2 **已上传**（`cli upload`，包 369.1 KB），待后台提交审核
+
 **未完成**：
-- 小程序尚未上传 v1.4.1（需在开发者工具里开启服务端口后操作）
 - v1.4.0 无独立 Release（未单独出包，其改动已累积在 v1.4.1 的 APK 中）
+- 小程序 v1.4.1 未单独上传，其改动已含在 v1.4.2 的版本里
 
 **发布 Release 的可行做法**（本机无 gh CLI）：从 Git 凭据管理器取 OAuth 令牌后调 GitHub API ——
 ```bash

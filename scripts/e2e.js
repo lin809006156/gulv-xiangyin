@@ -207,10 +207,50 @@ class CDP {
   b.hasRecognize ? ok('core/recognize.js 已加载') : err('core/recognize.js 未加载');
   b.libSize >= 200 ? ok(`物象库 ${b.libSize} 个物象`) : err(`物象库偏少：${b.libSize}`);
   b.hexCount === 64 ? ok(`64 卦数据完整`) : err(`卦象数据错误：${b.hexCount}`);
-  b.symbol ? ok(`自动展示今日之卦：${b.symbol} ${b.name}`) : err('未自动展示卦象');
-  b.yaoCount === 6 ? ok('六爻图形渲染正确') : err(`六爻数量错误：${b.yaoCount}`);
-  b.paramCount === 6 ? ok('音乐参数卡片渲染正确') : err(`音乐参数数量错误：${b.paramCount}`);
+  /* 默认态：进入页面不应自动取卦（用户明确要求「默认没内容」） */
+  b.symbol ? err(`默认不应自动取卦，却已显示：${b.symbol} ${b.name}`) : ok('默认不取卦：进入页面无卦象结果');
+  b.yaoCount === 0 ? ok('默认态：六爻图形未渲染') : err(`默认态却已渲染 ${b.yaoCount} 爻`);
+  b.paramCount === 0 ? ok('默认态：音乐参数卡片未渲染') : err(`默认态却已渲染 ${b.paramCount} 项参数`);
   b.manifest ? ok('PWA manifest 已引入') : err('PWA manifest 未引入');
+
+  /* ---------- 1.5 每日一卦：点按钮才取，且依据与结果必须一致 ---------- */
+  console.log('\n【1.5】每日一卦');
+  const daily = await cdp.send('Runtime.evaluate', {
+    expression: `(() => {
+      const card = document.querySelector('#resultCard');
+      const beforeHidden = card.classList.contains('hidden');
+      const noteBefore = (document.querySelector('#dailyNote')||{}).textContent || '';
+      document.querySelector('#btnDaily').click();
+      const afterHidden = card.classList.contains('hidden');
+      const name = (document.querySelector('#resultName')||{}).textContent || '';
+      const note = (document.querySelector('#dailyNote')||{}).textContent || '';
+      return { beforeHidden, afterHidden, noteBefore, name, note };
+    })()`,
+    returnByValue: true
+  });
+  const dl = daily.result.value;
+  dl.beforeHidden ? ok('默认：结果卡片隐藏') : err('默认却已显示结果卡片');
+  dl.noteBefore === '' ? ok('默认：起卦依据一栏为空') : err(`默认却有依据文字：${dl.noteBefore}`);
+  !dl.afterHidden && dl.name ? ok(`点「取今日之卦」后显示：${dl.name}`) : err('点按钮后未显示卦象');
+  /* 依据里的卦数须与所取之卦自洽（旧实现用当前时辰重算，会与归零取卦对不上） */
+  const numOk = /上卦数\s*(\d+).*下卦数\s*(\d+).*动爻\s*(\d+)/.exec(dl.note);
+  if (numOk) {
+    const chk = await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const H = window.ICHexagram;
+        const r = H.dailyHexagram(new Date());
+        return { u: r.detail.upperNum, l: r.detail.lowerNum, m: r.detail.movingLine, name: r.hex.name };
+      })()`,
+      returnByValue: true
+    });
+    const c = chk.result.value;
+    const same = +numOk[1] === c.u && +numOk[2] === c.l && +numOk[3] === c.m;
+    same
+      ? ok(`起卦依据与实取之卦一致（上 ${c.u} / 下 ${c.l} / 动 ${c.m} → ${c.name}）`)
+      : err(`起卦依据与实取之卦不符：显示 ${numOk[1]}/${numOk[2]}/${numOk[3]}，实际 ${c.u}/${c.l}/${c.m}`);
+  } else {
+    err(`起卦依据格式异常：${dl.note}`);
+  }
 
   /* ---------- 2. 交互 ---------- */
   console.log('\n【2】交互流程');

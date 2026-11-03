@@ -147,6 +147,138 @@ VOICES.forEach((v) => {
 });
 
 /* ===============================================================
+ * 1.5 八音的响度平衡 与 归一化正确性
+ * ---------------------------------------------------------------
+ * 两个已发生过的回退点：
+ *   ① normalize 只在峰值超标时衰减（g<1 才动手），轻的曲子任其弱小 ——
+ *      实测八音试听峰值跨度 8.9dB，箫、埙比磬低近 9dB，听着像没响；
+ *   ② 软限幅写成 tanh(x*1.05)/tanh(1.05)，在 |x|<1 时是**放大**
+ *      （0.43→0.54，抬 26%），归一化目标因此失效，返回的 peak 也与
+ *      实际输出对不上（0.4257 vs 0.5363）。
+ * 此处按**实际试听乐谱**验收：峰值须归一到同一水位，且 peak 字段可信。
+ * =============================================================== */
+console.log('\n=== 1.5 八音响度平衡 与 归一化正确性 ===');
+{
+  const A = require('../core/audition.js');
+  const rows = VOICES.map((v) => {
+    const pcm = R.renderScore(A.buildAuditionScore(v), { sampleRate: 22050 });
+    let both = 0;
+    for (let i = 0; i < pcm.left.length; i++) {
+      const m = Math.max(Math.abs(pcm.left[i]), Math.abs(pcm.right[i]));
+      if (m > both) both = m;
+    }
+    return { v, both, reported: pcm.peak };
+  });
+  const maxPeak = Math.max(...rows.map((r) => r.both)) || 1e-9;
+  const dbs = rows.map((r) => 20 * Math.log10(r.both / maxPeak));
+  const spread = Math.max(...dbs) - Math.min(...dbs);
+
+  console.log('  乐器      峰值   相对最响   peak字段');
+  rows.forEach((r, i) => {
+    console.log('  ' + r.v.padEnd(8) + r.both.toFixed(3).padStart(6)
+      + dbs[i].toFixed(1).padStart(9) + ' dB' + r.reported.toFixed(3).padStart(9));
+  });
+
+  if (spread <= 1.0) {
+    ok(`八音试听峰值跨度 ${spread.toFixed(1)} dB（≤1dB，响度一致，不会有的像没响）`);
+  } else {
+    err(`八音试听峰值跨度 ${spread.toFixed(1)} dB 偏大（应 ≤1dB）—— `
+      + '归一化可能退回了「只衰减不提升」：'
+      + rows.map((r, i) => r.v + ' ' + dbs[i].toFixed(1)).join(' / '));
+  }
+
+  const liars = rows.filter((r) => Math.abs(r.reported - r.both) > 1e-3);
+  if (!liars.length) {
+    ok('pcm.peak 与实际输出一致（导出与削波判断可据此进行）');
+  } else {
+    err('pcm.peak 与实际峰值不符：'
+      + liars.map((r) => `${r.v} 报 ${r.reported.toFixed(3)} 实 ${r.both.toFixed(3)}`).join('；'));
+  }
+
+  const quiet = R.renderScore({
+    duration: 0.6,
+    notes: [{ time: 0, dur: 0.3, midi: 60, vel: 0.05, voice: 'xian', pan: 0, timbre: R.DEFAULT_TIMBRE }],
+    sections: {}
+  }, { sampleRate: 8000, targetPeak: 0.92, reverb: 0 });
+  if (quiet.peak <= 0.9201) {
+    ok(`软限幅不放大信号（弱音峰值 ${quiet.peak.toFixed(3)} ≤ 目标 0.92）`);
+  } else {
+    err(`软限幅把信号抬过了目标：${quiet.peak.toFixed(3)} > 0.92`);
+  }
+}
+
+/* ===============================================================
+ * 1.6 八音的泛音结构不得退化
+ * ---------------------------------------------------------------
+ * 两个已发生过的回退点，都表现为「八音听起来好多重复」：
+ *   ① densityKeep 把高次泛音压到 10% —— 钟、磬、弦、柷敔
+ *      全退化成近似纯正弦；
+ *   ② vBlow 压根没使用 partials / partialAmp —— 箫、埙、管
+ *      三者只剩锯齿的细微差别，谐波结构雷同。
+ * 此处按 VOICE_SPECS 声明的分音位置逐一验证「确有能量」。
+ * 钟磬的泛音不成整数倍（inharmonic），故按实际频率取样。
+ * =============================================================== */
+console.log('\n=== 1.6 八音泛音结构（按 VOICE_SPECS 声明的分音位置）===');
+{
+  const TB = require('../core/audition.js').AUDITION_TIMBRE;
+  const SR = 44100;
+  const MIDI = 62;
+  const f0 = R.midiToFreq(MIDI);
+
+  function energyAt(x, sr, f, fromSec, lenSec) {
+    const s0i = Math.floor(fromSec * sr);
+    const N = Math.min(Math.floor(lenSec * sr), x.length - s0i);
+    if (N <= 0) return 0;
+    const w = 2 * Math.PI * f / sr;
+    const c = 2 * Math.cos(w);
+    let s1 = 0, s2 = 0;
+    for (let i = 0; i < N; i++) {
+      const win = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (N - 1));
+      const s0 = x[s0i + i] * win + c * s1 - s2;
+      s2 = s1; s1 = s0;
+    }
+    return Math.sqrt(Math.max(0, s1 * s1 + s2 * s2 - c * s1 * s2)) / N;
+  }
+  function peakNear(x, sr, f) {
+    let mx = 0;
+    for (let d = -0.02; d <= 0.0201; d += 0.005) {
+      mx = Math.max(mx, energyAt(x, sr, f * (1 + d), 0.05, 0.35));
+    }
+    return mx;
+  }
+
+  let degenerate = 0;
+  VOICES.forEach((v) => {
+    const spec = R.VOICE_SPECS[v];
+    if (!spec || !spec.partials) return;   // 鼓为独立合成，无分音列
+    const pcm = R.renderScore({
+      duration: 2.5,
+      notes: [{ time: 0, dur: 2.0, midi: MIDI, vel: 0.5, voice: v, pan: 0, timbre: TB }],
+      sections: {}
+    }, { sampleRate: SR });
+    const x = pcm.left;
+    const base = peakNear(x, SR, f0) || 1e-9;
+    const pcts = [];
+    let strong = 0;
+    spec.partials.forEach((ratio, i) => {
+      if (i === 0) return;
+      const inh = 1 + (spec.inharmonic * 0.06 * (i % 2 === 0 ? 1 : -1) * (i + 1));
+      const pct = peakNear(x, SR, f0 * ratio * inh) / base * 100;
+      pcts.push(pct.toFixed(1));
+      if (pct >= 3) strong++;
+    });
+    if (strong >= 2) {
+      ok(`${v}：${strong} 个分音清晰（${pcts.join(' / ')}%），非纯音`);
+    } else {
+      degenerate++;
+      err(`${v}：仅 ${strong} 个分音 ≥3%（${pcts.join(' / ')}%）—— 已退化为近似纯音，`
+        + '八音会听起来重复');
+    }
+  });
+  if (!degenerate) ok('八音的泛音结构均与 VOICE_SPECS 声明相符');
+}
+
+/* ===============================================================
  * 2. 五音清浊单调性
  * =============================================================== */
 console.log('\n=== 2. 五音清浊单调性（《礼记·乐记》疏：宫至浊 → 羽最清）===');

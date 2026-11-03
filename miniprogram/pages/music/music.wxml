@@ -73,6 +73,54 @@
     <text class="panel-note">{{playerTip}}</text>
   </view>
 
+  <!-- 音层：与网页版同一套配置（疗愈频率 + 自然音层，可选叠加） -->
+  <view class="glass-card">
+    <view class="card-head">
+      <text class="ch-title">音层</text>
+      <text class="ch-note">可选叠加 · 不涉疗效</text>
+    </view>
+    <text class="panel-desc">五声之本不变，另可在其下叠加现代聆听元素。全部关闭时，听感与纯净五声一致。</text>
+
+    <view class="amb-group">
+      <view class="amb-head">
+        <text class="amb-title">疗愈频率 · 索菲吉奥九频</text>
+        <text class="amb-clear" bindtap="clearSolf">关闭</text>
+      </view>
+      <view class="amb-chips">
+        <view class="amb-chip {{solOn && solFreq === item.f ? 'is-on' : ''}}"
+              wx:for="{{solfList}}" wx:key="f" data-f="{{item.f}}" bindtap="pickSolf">
+          <text class="ac-name">{{item.label}}</text>
+          <text class="ac-freq">{{item.f}} Hz</text>
+        </view>
+      </view>
+      <text class="amb-intro" wx:if="{{solfIntro}}">{{solfIntro}}</text>
+      <text class="amb-intro" wx:else>点选其一开启；再点一次即关闭。</text>
+    </view>
+
+    <view class="amb-group">
+      <view class="amb-head">
+        <text class="amb-title">自然音层 · 可多选</text>
+      </view>
+      <view class="amb-chips">
+        <view class="amb-chip {{natureOn[item.key] ? 'is-on' : ''}}"
+              wx:for="{{natureList}}" wx:key="key" data-key="{{item.key}}" bindtap="toggleNature">
+          <text class="ac-name">{{item.name}}</text>
+          <text class="ac-freq">合成音层</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="amb-vol">
+      <text class="amb-vol-label">音层总量</text>
+      <slider class="amb-slider" min="0" max="100" value="{{ambLevel}}" activeColor="#B23A2E"
+              backgroundColor="rgba(178,160,132,.22)" block-size="16" block-color="#B23A2E"
+              bindchanging="onAmbLevel" bindchange="onAmbLevel" />
+      <text class="amb-vol-num">{{ambLevel}}%</text>
+    </view>
+
+    <text class="panel-note">当前：{{ambOnText}}。音层在下一段即兴起混入 —— 小程序端音层混入音频本体，非实时总线。</text>
+  </view>
+
   <!-- 乐器园：八音 -->
   <view class="glass-card">
     <view class="card-head">

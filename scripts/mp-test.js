@@ -363,6 +363,48 @@ assert(music.data.instruments.length === 8, `乐器园八音齐备（实得 ${mu
 assert(music.data.instruments[0].name && music.data.instruments[0].guaName, '乐器条目含名称与所配卦');
 assert(!!music.data.mini, '音乐页挂上浮动播放条状态');
 
+/* ---------- 音层（与网页版同一套配置） ---------- */
+assert(music.data.solfList.length === 9, `音层：索菲吉奥九频齐备（实得 ${music.data.solfList.length}）`);
+assert(music.data.natureList.length === 5, `音层：自然音层五层齐备（实得 ${music.data.natureList.length}）`);
+assert(music.data.solOn === true && music.data.solFreq === 528, '音层：默认开疗愈 528Hz（开销几乎为零）');
+assert(Object.values(music.data.natureOn).every((v) => v === false), '音层：自然音层默认全关（五层全开约 +400ms）');
+
+// 点某个频率 → 切换；再点同一个 → 关闭
+const solf741 = music.data.solfList.filter((x) => x.f === 741)[0];
+assert(!!solf741 && !!solf741.label && !!solf741.intro, '音层：九频条目含名称与说明');
+music.pickSolf({ currentTarget: { dataset: { f: 741 } } });
+assert(music.data.solOn === true && music.data.solFreq === 741, '音层：可切换疗愈频率 741Hz');
+assert(music.data.solfIntro.length > 0, '音层：切换后显示该频的说明');
+music.pickSolf({ currentTarget: { dataset: { f: 741 } } });
+assert(music.data.solOn === false, '音层：再点同一频＝关闭');
+music.clearSolf();
+assert(music.ambient.solOn === false, '音层：关闭按钮生效');
+
+// 自然音层可多选
+music.toggleNature({ currentTarget: { dataset: { key: 'rain' } } });
+music.toggleNature({ currentTarget: { dataset: { key: 'fire' } } });
+assert(music.data.natureOn.rain === true && music.data.natureOn.fire === true, '音层：自然音层可多选叠加');
+assert(music.data.natureOn.birds === false, '音层：未选的层保持关闭');
+music.toggleNature({ currentTarget: { dataset: { key: 'rain' } } });
+assert(music.data.natureOn.rain === false, '音层：再点取消该层');
+
+// 总量滑杆
+music.onAmbLevel({ detail: { value: 40 } });
+assert(music.data.ambLevel === 40, '音层：总量滑杆生效');
+
+// 传给引擎的参数结构须与 render / player 一致
+const ambArg = music.buildAmbient();
+assert(ambArg && typeof ambArg.level === 'number' && ambArg.level >= 0 && ambArg.level <= 1,
+  `音层：level 归一到 0..1（实得 ${ambArg.level}）`);
+assert(ambArg.solfeggio === null || (typeof ambArg.solfeggio.freq === 'number' && typeof ambArg.solfeggio.level === 'number'),
+  '音层：solfeggio 结构合法');
+assert(Object.keys(ambArg.nature).length === 5, '音层：nature 覆盖五层');
+assert(music.data.ambOnText.length > 0, '音层：界面显示当前叠加摘要');
+
+// 偏好持久化
+const savedAmb = (JSON.parse(storage.get('gx_pref') || '{}') || {}).ambient;
+assert(!!savedAmb && savedAmb.level === 40, '音层：配置已写入偏好（下次进来保持）');
+
 pageStack.length = 0;
 currentPage = null;
 loadModule('pages/learn/learn.js');

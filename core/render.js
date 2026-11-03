@@ -223,7 +223,7 @@ const VOICE_SPECS = {
     noiseAmt: 0.55,
     noiseHP: 9000,
     noiseDecay: 0.005,
-    gain: 1.9, tone: 0.34,
+    gain: 2.2, tone: 0.34,
     sub: 0.0
   },
   zhong: {        // 钟：金属合瓦形，非谐泛音丰富，余韵极长
@@ -236,7 +236,7 @@ const VOICE_SPECS = {
     noiseAmt: 0.06,
     noiseHP: 4200,
     noiseDecay: 0.010,
-    gain: 1, tone: 0.40,
+    gain: 0.95, tone: 0.40,
     sub: 0.30
   },
   xian: {         // 弦：拨弦，谐波列丰富，衰减中带音高漂移
@@ -249,7 +249,7 @@ const VOICE_SPECS = {
     noiseAmt: 0.05,
     noiseHP: 3400,
     noiseDecay: 0.012,
-    gain: 0.85, tone: 0.50,
+    gain: 1.1, tone: 0.50,
     sub: 0.10,
     vibrato: 0.10,
     drift: 0.0012
@@ -262,7 +262,7 @@ const VOICE_SPECS = {
     noiseAmt: 0.46,
     noiseHP: 620,
     noiseDecay: 0.055,
-    gain: 1.05, tone: 0.20,
+    gain: 1.0, tone: 0.20,
     sub: 0.62
   },
   xiao: {         // 箫：竖吹闭孔，基频弱，气声多，余韵悠长
@@ -275,7 +275,7 @@ const VOICE_SPECS = {
     noiseAmt: 0.26,
     noiseHP: 2400,
     noiseDecay: 0.34,
-    gain: 2.6, tone: 0.58,
+    gain: 4.6, tone: 0.58,
     sub: 0.0,
     sawMix: 0.30
   },
@@ -289,7 +289,7 @@ const VOICE_SPECS = {
     noiseAmt: 0.22,
     noiseHP: 1200,
     noiseDecay: 0.20,
-    gain: 2.8, tone: 0.20,
+    gain: 4.9, tone: 0.20,
     sub: 0.52,
     sawMix: 0.30
   },
@@ -303,7 +303,7 @@ const VOICE_SPECS = {
     noiseAmt: 0.19,
     noiseHP: 3000,
     noiseDecay: 0.22,
-    gain: 2.4, tone: 0.62,
+    gain: 3.9, tone: 0.62,
     sub: 0.12,
     sawMix: 0.40
   },
@@ -317,7 +317,7 @@ const VOICE_SPECS = {
     noiseAmt: 0.46,
     noiseHP: 4200,
     noiseDecay: 0.013,
-    gain: 1.55, tone: 0.86,
+    gain: 1.0, tone: 0.86,
     sub: 0.0
   }
 };
@@ -529,8 +529,13 @@ class Mixer {
       // 否则两项互相抵消，明亮的乐器反而清不出差别。
       const rel = p / Math.max(1, partials.length - 1);
       const brightKeep = Math.max(0.04, 1 + (bright - 0.45) * 1.85 * rel);
-      // 浓度项：越厚（宫），高次泛音越少、基音越饱满
-      const densityKeep = Math.max(0.10, (1.55 - tb.harmonic * 1.25) - rel * tb.harmonic * 0.75);
+      /* 泛音浓度：清浊只做温和的整体倾斜，不随 rel 急剧衰减。
+         此处曾用 (1.55 - harmonic*1.25) - rel*harmonic*0.75，
+         在 harmonic=0.95（试听所用）时把末次泛音压到 0.10 ——
+         钟、磬、弦、柷敔因此全退化成近似纯正弦，八音听起来一个样。
+         乐器固有的泛音比例由 partialAmp 决定（钟磬的非谐泛音是材质使然），
+         调式的清浊只该微微加减，不能抹平它。 */
+      const densityKeep = 1.02 - tb.harmonic * 0.30;
       const amp = vel * spec.partialAmp[p] * g * 0.42
         * (p === 0 ? 1 : brightKeep * densityKeep);
       if (amp < 0.0006) continue;
@@ -719,7 +724,17 @@ class Mixer {
       // 叠加正弦基音：吹管基频强，锯齿提供泛音
       // 基频权重亦随清浊而变：浊则基音更实（宫之厚），清则基音更薄（羽之清）
       const fundamental = fastSin(phase) * spec.tone * (0.55 + tb.harmonic * 0.75);
-      const mix = fundamental * (1 - spec.sawMix) + lp.process(saw, 'low') * spec.sawMix;
+      /* 谐波骨架：按 spec.partials / partialAmp 叠加。
+         此前这两项对吹管是「死数据」—— vBlow 只用了 sawMix/tone，
+         于是箫、埙、管三者只剩锯齿波纹的细微差别，听起来几乎一样。
+         气声仍由锯齿与噪声提供，音色的分别由这里定。
+         幅度随 spec.tone 缩放，与基音同量级，免得各器响度失衡。 */
+      let harm = 0;
+      for (let p = 1; p < spec.partials.length; p++) {
+        harm += fastSin(phase * spec.partials[p]) * spec.partialAmp[p];
+      }
+      harm *= spec.tone * 0.55;
+      const mix = fundamental * (1 - spec.sawMix) + lp.process(saw, 'low') * spec.sawMix + harm;
       const s = mix * env * vel * g * 0.66;      phase += w;
       if (phase > Math.PI * 2) phase -= Math.PI * 2;
       this.w(start + i, s * gl, s * gr);
@@ -1210,18 +1225,44 @@ function normalize(L, R, targetPeak) {
     if (b > peak) peak = b;
   }
   if (peak > 0) {
-    const g = targetPeak / peak;
-    if (g < 1) {
-      for (let i = 0; i < L.length; i++) { L[i] *= g; R[i] *= g; }
-      peak = targetPeak;
+    /* 双向归一化：轻的提上来、响的压下去。
+       此前只在 peak > target 时衰减（g < 1 才动手），于是「弱的曲子」
+       任其弱小 —— 实测八音试听峰值跨度 8.9dB，箫、埙比磬低了近 9dB，
+       听着像没响。本应用内容全部为程序合成、无录音底噪，提升是安全的；
+       上限 +20dB（g ≤ 10），防极端情况把一个弱音抬成巨响。 */
+    let g = targetPeak / peak;
+    if (g > 10) g = 10;
+    for (let i = 0; i < L.length; i++) { L[i] *= g; R[i] *= g; }
+  }
+  /* 软限幅：只压不抬。
+     原实现 tanh(x * 1.05) / tanh(1.05) 在 |x| < 1 时是**放大**
+     （0.43 → 0.54，抬了 26%），等于全程抬了一遍 —— 归一化目标因此失效，
+     弱音被抬高、动态被压缩，且返回的 peak 与实际输出对不上。
+     现改为仅在超过拐点后压缩：拐点以下原样通过，以上渐近到 1.0。 */
+  const knee = Math.min(0.95, targetPeak);
+  const span = Math.max(1e-6, 1 - knee);
+  const tanhSpan = Math.tanh(1);
+  for (let i = 0; i < L.length; i++) {
+    let a = Math.abs(L[i]);
+    if (a > knee) {
+      const sign = L[i] < 0 ? -1 : 1;
+      L[i] = sign * (knee + span * Math.tanh((a - knee) / span) / tanhSpan * 0.999);
+    }
+    a = Math.abs(R[i]);
+    if (a > knee) {
+      const sign = R[i] < 0 ? -1 : 1;
+      R[i] = sign * (knee + span * Math.tanh((a - knee) / span) / tanhSpan * 0.999);
     }
   }
-  // 软限幅：仅在接近满量程处起作用
+  // 返回**实际输出**的峰值（此前返回缩放前的值，与真实结果不符）
+  let outPeak = 0;
   for (let i = 0; i < L.length; i++) {
-    L[i] = Math.tanh(L[i] * 1.05) / Math.tanh(1.05);
-    R[i] = Math.tanh(R[i] * 1.05) / Math.tanh(1.05);
+    const a = Math.abs(L[i]);
+    if (a > outPeak) outPeak = a;
+    const b = Math.abs(R[i]);
+    if (b > outPeak) outPeak = b;
   }
-  return peak;
+  return outPeak;
 }
 
 /* ===============================================================

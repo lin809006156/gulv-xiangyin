@@ -83,3 +83,44 @@
 .inst-cite { font-size: 19rpx; color: var(--ink-4); }
 .inst-btn { align-self: flex-start; margin-top: 6rpx; }
 .inst-btn.is-on { color: var(--cinnabar); border-color: rgba(178,58,46,.4); }
+
+/* ---------- 音层 ---------- */
+.amb-group { margin-top: 24rpx; }
+.amb-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+.amb-title { font-size: 23rpx; color: var(--ink-3); letter-spacing: .06em; }
+.amb-clear {
+  font-size: 21rpx; color: var(--ink-4);
+  padding: 4rpx 14rpx; border-radius: 999rpx;
+  border: 1rpx solid rgba(178,160,132,.28);
+}
+.amb-chips { display: flex; flex-wrap: wrap; gap: 12rpx; }
+.amb-chip {
+  flex: 1 1 28%; min-width: 150rpx;
+  padding: 14rpx 12rpx;
+  border-radius: 18rpx;
+  background: rgba(255,255,255,.55);
+  border: 1rpx solid rgba(178,160,132,.18);
+  display: flex; flex-direction: column; align-items: center; gap: 2rpx;
+  transition: background .18s ease, border-color .18s ease;
+}
+.amb-chip.is-on {
+  background: rgba(178,58,46,.10);
+  border-color: rgba(178,58,46,.42);
+}
+.ac-name { font-size: 23rpx; color: var(--ink); font-weight: 600; }
+.amb-chip.is-on .ac-name { color: var(--cinnabar); }
+.ac-freq { font-size: 19rpx; color: var(--ink-4); }
+.amb-intro {
+  display: block; font-size: 21rpx; color: var(--ink-4);
+  line-height: 1.6; margin-top: 10rpx;
+}
+.amb-vol {
+  display: flex; align-items: center; gap: 14rpx;
+  margin-top: 24rpx;
+}
+.amb-vol-label { font-size: 22rpx; color: var(--ink-3); flex: none; }
+.amb-slider { flex: 1; margin: 0; }
+.amb-vol-num { font-size: 22rpx; color: var(--ink-3); width: 70rpx; text-align: right; flex: none; }

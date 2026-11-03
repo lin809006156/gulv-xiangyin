@@ -1,6 +1,6 @@
 {
   "name": "gulv-xiangyin",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "古律象音 · 每日观象起卦，为每一卦生成一段心音",
   "private": true,
   "scripts": {

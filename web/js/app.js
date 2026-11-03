@@ -164,7 +164,7 @@
     bindImageSearch();
     renderInstruments();
     renderHistory();
-    updateDailyNote();
+    updateDailyNote(null);   // 默认不取卦，依据一栏留空
     renderAmbientChips();
     bindAmbient();
     bindSkin();
@@ -173,7 +173,8 @@
     bindLiquidPress();
     restorePref();
     bindMiniPlayerLayout();
-    castDaily();
+    /* 进页面不再自动取卦 —— 由用户点「取今日之卦」触发。
+       自动取卦会让首页一进来就堆着结果，且把卦历灌满当日记录。 */
   }
 
   function renderDate() {
@@ -204,12 +205,20 @@
     }, 1000);
   }
 
-  function updateDailyNote() {
-    const d = new Date();
-    const yearZhi = H.getYearZhiIndex(d);
-    const detail = H.timeHexagram(d).detail;
-    $('#dailyNote').textContent =
-      `年支${H.ZHI_ORDER[yearZhi - 1]} · ${detail.month}月${detail.day}日 · ${detail.shi}时` +
+  /**
+   * 填「起卦依据」一栏
+   * ---------------------------------------------------------------
+   * 必须传入**这一卦自己的 detail**（dailyHexagram 的返回值），
+   * 不能另取当前时刻重算 —— 每日一卦固定取当日子时，
+   * 若这里用 new Date() 的当前时辰，显示的卦数与实际取的卦会对不上。
+   * @param {object|null} detail 传空则清空（默认态）
+   */
+  function updateDailyNote(detail) {
+    const el = $('#dailyNote');
+    if (!el) return;
+    if (!detail) { el.textContent = ''; return; }
+    el.textContent =
+      `年支${detail.yearZhi} · ${detail.month}月${detail.day}日 · ${detail.shi}时` +
       `　→　上卦数 ${detail.upperNum}，下卦数 ${detail.lowerNum}，动爻 ${detail.movingLine}`;
   }
 
@@ -697,7 +706,9 @@
    * =============================================================== */
 
   function castDaily() {
-    present(H.dailyHexagram(new Date()));
+    const result = H.dailyHexagram(new Date());
+    present(result);
+    updateDailyNote(result.detail);
   }
 
   function castImage() {
@@ -749,6 +760,8 @@
 
     /* ---------- 起卦栏：卦象解读 ---------- */
     $('#resultCard').classList.remove('hidden');
+    // 起卦依据只属于「每日一卦」；走观象/数字起卦时先清空，由 castDaily 再填
+    updateDailyNote(null);
 
     $('#resultSymbol').textContent = reading.symbol;
     $('#resultName').textContent = reading.name;
@@ -1501,43 +1514,13 @@
 
   /* ===============================================================
    * 乐器园 · 八音介绍与试听
+   * ---------------------------------------------------------------
+   * 试听乐谱与音色参数在 core/audition.js（两端共用同一份），
+   * 此处只做界面与播放调度。
    * =============================================================== */
 
-  /**
-   * 试听乐谱：以宫调式五声写一段短句，用指定乐器演奏。
-   * 打击类（鼓、柷敔）移低/移高音区以贴合其物理音色。
-   * 音色修饰取宫调式参数（浊而中和），与生成音乐同一套 VOICE_SPECS。
-   */
-  const AUDITION_TIMBRE = {
-    clarity: 0.15, brightness: 0.24, attack: 0.085,
-    release: 0.80, noise: 0.14, harmonic: 0.95
-  };
-
-  const AUDITION_PHRASE = [0, 2, 4, 7, 9, 7, 4, 2];   // 宫 商 角 徵 羽 徵 角 商
-
   function buildAuditionScore(voice) {
-    const percussive = voice === 'gu';
-    const highClack = voice === 'zhu';
-    const root = percussive ? 36 : highClack ? 72 : 62;
-    const beat = percussive ? 0.34 : 0.44;
-    const durs = [0.9, 0.7, 0.9, 1.2, 1.4, 0.8, 0.9, 1.7];
-
-    const notes = [];
-    let t = 0;
-    for (let i = 0; i < AUDITION_PHRASE.length; i++) {
-      const dur = durs[i] * beat;
-      notes.push({
-        time: +t.toFixed(3),
-        dur: +dur.toFixed(3),
-        midi: root + AUDITION_PHRASE[i],
-        vel: 0.32,
-        voice,
-        pan: 0,
-        timbre: AUDITION_TIMBRE
-      });
-      t += dur * 0.92;
-    }
-    return { notes, duration: t + 0.5, sections: {} };
+    return window.ICAudition.buildAuditionScore(voice);
   }
 
   function renderInstruments() {

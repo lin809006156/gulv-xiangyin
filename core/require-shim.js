@@ -23,6 +23,7 @@
     './hexagram.js': 'ICHexagram',
     './music.js': 'ICMusic',
     './render.js': 'ICRender',
+    './audition.js': 'ICAudition',
     './player.js': 'ICPlayer',
     './recognize.js': 'ICRecognize',
     './viz-stage.js': 'ICVizStage',

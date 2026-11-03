@@ -11,6 +11,7 @@
 const H = require('../../core/hexagram.js');
 const M = require('../../core/music.js');
 const D = require('../../core/data.js');
+const R = require('../../core/render.js');
 const store = require('../../utils/storage.js');
 const Viz = require('../../core/viz-stage.js');
 const { fmtTime } = require('../../core/player.js');
@@ -18,36 +19,24 @@ const { fmtTime } = require('../../core/player.js');
 const app = getApp();
 const mini = require('../../utils/miniplayer.js');
 
-/** 试听短句：宫 商 角 徵 羽 徵 角 商（八音同一句，各以本音色奏出） */
-const AUDITION_PHRASE = [0, 2, 4, 7, 9, 7, 4, 2];
-const AUDITION_TIMBRE = {
-  clarity: 0.15, brightness: 0.24, attack: 0.085,
-  release: 0.80, noise: 0.14, harmonic: 0.95
-};
+/** 试听乐谱与音色参数在 core/audition.js（两端共用同一份） */
+const { buildAuditionScore } = require('../../core/audition.js');
 
-/** 以某乐器音色奏一句五声短句（与网页版同一套参数） */
-function buildAuditionScore(voice) {
-  const percussive = voice === 'gu';
-  const highClack = voice === 'zhu';
-  const root = percussive ? 36 : highClack ? 72 : 62;
-  const beat = percussive ? 0.34 : 0.44;
-  const durs = [0.9, 0.7, 0.9, 1.2, 1.4, 0.8, 0.9, 1.7];
-  const notes = [];
-  let t = 0;
-  for (let i = 0; i < AUDITION_PHRASE.length; i++) {
-    const dur = durs[i] * beat;
-    notes.push({
-      time: +t.toFixed(3),
-      dur: +dur.toFixed(3),
-      midi: root + AUDITION_PHRASE[i],
-      vel: 0.32,
-      voice: voice,
-      pan: 0,
-      timbre: AUDITION_TIMBRE
-    });
-    t += dur * 0.92;
-  }
-  return { notes: notes, duration: t + 0.5, sections: {} };
+/**
+ * 音层（可选叠加，非古律、非疗效）
+ * ---------------------------------------------------------------
+ * 与网页版同一套配置，区别只在生效方式：
+ *   网页端 —— 实时音层总线，开关即时可闻；
+ *   小程序 —— 没有实时总线，音层**烘进 PCM**，故对「下一段即兴」生效。
+ * 默认只开疗愈 528Hz：开销几乎为零（渲染耗时 +7ms），
+ * 五层自然音全开约 +400ms，让用户按需开启。
+ */
+const NATURE_KEYS = ['rain', 'birds', 'fire', 'wind', 'stream'];
+
+function defaultAmbient() {
+  const nature = {};
+  NATURE_KEYS.forEach((k) => { nature[k] = false; });
+  return { solOn: true, solFreq: 528, nature, level: 100 };
 }
 
 Page({
@@ -65,7 +54,16 @@ Page({
     liveText: '即兴中',
     playerTip: '',
     playerTime: '00:00 / 00:00',
-    playingKey: ''
+    playingKey: '',
+    /* 音层 */
+    solfList: [],
+    natureList: [],
+    solOn: true,
+    solFreq: 528,
+    solfIntro: '',
+    natureOn: {},          // { rain: bool, ... } 供 wxml 高亮
+    ambLevel: 100,
+    ambOnText: ''
   },
 
   onLoad() {
@@ -74,6 +72,7 @@ Page({
     this.canvas = null;
     this.raf = 0;
     this.lastT = 0;
+    this.initAmbient();
     // 播放状态订阅由 miniBind() 统一负责（它同时同步 mini / isPlaying / paused / loopOn），
     // 此处不再重复订阅，避免一次状态变化触发两次 setData。
     this.setData({ instruments: this.buildInstruments() });
@@ -281,6 +280,124 @@ Page({
    * 播放控制
    * ============================================================= */
 
+  /* =============================================================
+   * 音层（与网页版同一套配置）
+   * ============================================================= */
+
+  /** 初始化音层：九频/五层清单 + 读回偏好 */
+  initAmbient() {
+    const solfList = R.SOLFEGGIO_FREQS.map((f, i) => ({
+      f,
+      label: R.SOLFEGGIO_LABELS[i],
+      intro: R.SOLFEGGIO_INTROS[i]
+    }));
+    const natureList = R.NATURE_LAYERS.map((l) => ({ key: l.key, name: l.name, intro: l.intro }));
+    const saved = (store.loadPref() || {}).ambient;
+    const amb = defaultAmbient();
+    if (saved) {
+      if (typeof saved.solOn === 'boolean') amb.solOn = saved.solOn;
+      if (typeof saved.solFreq === 'number') amb.solFreq = saved.solFreq;
+      if (saved.nature) NATURE_KEYS.forEach((k) => { amb.nature[k] = !!saved.nature[k]; });
+      if (typeof saved.level === 'number') amb.level = saved.level;
+    }
+    this.ambient = amb;
+    this.setData({
+      solfList,
+      natureList,
+      solOn: amb.solOn,
+      solFreq: amb.solFreq,
+      solfIntro: amb.solOn ? solfList.find((x) => x.f === amb.solFreq).intro : '',
+      natureOn: Object.assign({}, amb.nature),
+      ambLevel: amb.level,
+      ambOnText: this.ambientSummary(amb)
+    });
+    this.pushAmbient();
+  },
+
+  /** 当前音层 → 一句话摘要 */
+  ambientSummary(amb) {
+    const on = [];
+    if (amb.solOn) {
+      const i = R.SOLFEGGIO_FREQS.indexOf(amb.solFreq);
+      on.push(`疗愈 ${amb.solFreq}Hz${i >= 0 ? '（' + R.SOLFEGGIO_LABELS[i] + '）' : ''}`);
+    }
+    R.NATURE_LAYERS.forEach((l) => { if (amb.nature[l.key]) on.push(l.name); });
+    return on.length ? on.join('、') : '全部关闭';
+  },
+
+  /** 音层 → 引擎参数 */
+  buildAmbient() {
+    const a = this.ambient;
+    const nature = {};
+    NATURE_KEYS.forEach((k) => { nature[k] = !!a.nature[k]; });
+    return {
+      solfeggio: a.solOn ? { freq: a.solFreq, level: 0.05 } : null,
+      nature,
+      level: a.level / 100
+    };
+  },
+
+  /** 把音层推给引擎并存入偏好 */
+  pushAmbient() {
+    const p = app.globalData.player;
+    if (p) p.setAmbient(this.buildAmbient());
+    const pref = store.loadPref() || {};
+    const a = this.ambient;
+    pref.ambient = { solOn: a.solOn, solFreq: a.solFreq, nature: Object.assign({}, a.nature), level: a.level };
+    store.savePref(pref);
+  },
+
+  /** 点某个疗愈频率：再点一次＝关闭 */
+  pickSolf(e) {
+    const f = Number(e.currentTarget.dataset.f);
+    const a = this.ambient;
+    if (a.solOn && a.solFreq === f) a.solOn = false;
+    else { a.solOn = true; a.solFreq = f; }
+    this.afterAmbientChange();
+  },
+
+  /** 关闭疗愈频率 */
+  clearSolf() {
+    this.ambient.solOn = false;
+    this.afterAmbientChange();
+  },
+
+  /** 多选自然音层 */
+  toggleNature(e) {
+    const k = e.currentTarget.dataset.key;
+    this.ambient.nature[k] = !this.ambient.nature[k];
+    this.afterAmbientChange();
+  },
+
+  /** 音层总量滑杆 */
+  onAmbLevel(e) {
+    this.ambient.level = Number(e.detail.value);
+    this.afterAmbientChange();
+  },
+
+  /** 音层改动后：刷新界面、推给引擎、提示生效时机 */
+  afterAmbientChange() {
+    const a = this.ambient;
+    const solf = this.data.solfList.filter((x) => x.f === a.solFreq)[0];
+    const summary = this.ambientSummary(a);
+    this.setData({
+      solOn: a.solOn,
+      solFreq: a.solFreq,
+      solfIntro: (a.solOn && solf) ? solf.intro : '',
+      natureOn: Object.assign({}, a.nature),
+      ambLevel: a.level,
+      ambOnText: summary,
+      playerTip: summary === '全部关闭'
+        ? '音层已全部关闭：只留下五声本体。'
+        : `音层：${summary} —— 下一段即兴起混入。`
+    });
+    this.pushAmbient();
+  },
+
+  /* =============================================================
+   * 播放
+   * ============================================================= */
+
   togglePlay() {
     const p = app.globalData.player;
     const result = app.globalData.currentResult;
@@ -303,6 +420,8 @@ Page({
     //   UI 状态改由引擎的 'playing' 事件驱动（app.js 的 onStateChange）。
     this.setData({ playerTip: '正在编曲：第一段即兴…' });
     p.playGenerative(result.hex, result.music, result.changedMusic, {
+      // 音层随首轮一起烘进 PCM（小程序端无实时总线）
+      ambient: this.buildAmbient(),
       onChange: (info) => {
         const names = { intro: '起', theme: '承', variation: '转', coda: '合' };
         this.setData({ liveText: (names[info.section] || '奏') + ' · 即兴中' });

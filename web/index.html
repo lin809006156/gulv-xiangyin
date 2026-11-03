@@ -183,12 +183,13 @@
         <!-- 每日一卦 -->
         <div class="tab-panel is-active" data-panel="daily">
           <p class="panel-desc">
-            依梅花易数时间起卦，以年月日时成卦。同一日之内，此卦恒定不变。
+            依梅花易数时间起卦，取当日子时，以年月日时成卦。同一日之内，此卦恒定不变。
           </p>
+          <!-- 起卦依据：点「取今日之卦」后才填入，默认留空 -->
+          <p class="panel-note" id="dailyNote"></p>
           <button class="btn btn-primary" id="btnDaily">
             <span id="btnDailyText">取今日之卦</span>
           </button>
-          <p class="panel-note" id="dailyNote"></p>
         </div>
 
         <!-- 观象起卦（手动选物象） -->
@@ -234,8 +235,8 @@
         <div class="result-head">
           <div class="yao-figure" id="yaoFigure"></div>
           <div class="result-title">
-            <div class="result-symbol" id="resultSymbol">䷀</div>
-            <h2 id="resultName">—</h2>
+            <div class="result-symbol" id="resultSymbol"></div>
+            <h2 id="resultName"></h2>
             <p class="result-meta">
               <span id="resultStructure"></span>
               <span class="dot">·</span>
@@ -521,6 +522,7 @@
 <script src="core/hexagram.js"></script>
 <script src="core/music.js"></script>
 <script src="core/render.js"></script>
+<script src="core/audition.js"></script>
 <script src="core/player.js"></script>
 <script src="core/recognize.js"></script>
 <script src="core/viz-stage.js"></script>

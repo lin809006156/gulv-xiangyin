@@ -44,6 +44,7 @@ const FILES = [
   'hexagram.js',
   'music.js',
   'render.js',
+  'audition.js',
   'player.js',
   'recognize.js',
   'viz-stage.js',

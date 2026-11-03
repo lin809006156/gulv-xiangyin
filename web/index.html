@@ -185,11 +185,14 @@
           <p class="panel-desc">
             依梅花易数时间起卦，取当日子时，以年月日时成卦。同一日之内，此卦恒定不变。
           </p>
-          <!-- 起卦依据：点「取今日之卦」后才填入，默认留空 -->
+          <!-- 按钮独占一行；起卦依据在其后，默认不占位（:empty 隐藏），
+               避免空行把按钮夹在两段文字中间 -->
+          <div class="panel-action">
+            <button class="btn btn-primary" id="btnDaily">
+              <span id="btnDailyText">取今日之卦</span>
+            </button>
+          </div>
           <p class="panel-note" id="dailyNote"></p>
-          <button class="btn btn-primary" id="btnDaily">
-            <span id="btnDailyText">取今日之卦</span>
-          </button>
         </div>
 
         <!-- 观象起卦（手动选物象） -->

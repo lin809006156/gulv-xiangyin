@@ -265,47 +265,52 @@ const VOICE_SPECS = {
     gain: 1.0, tone: 0.20,
     sub: 0.62
   },
-  xiao: {         // 箫：竖吹闭孔，基频弱，气声多，余韵悠长
-    partials: [1.0, 2.0, 3.0, 4.0],
-    partialAmp: [1.0, 0.30, 0.15, 0.07],
-    partialDecay: [1.0, 0.70, 0.50, 0.34],
+  xiao: {         // 箫：竹制开管（两端开口），全谐波且衰减快，气声最多
+    // 开管两端皆为波腹，含全部整数次谐波；但竹管柔和，高次泛音衰得很快 ——
+    // 谱形必须比管「暗」得多，否则两器只剩亮度差，听感仍会混。
+    partials: [1.0, 2.0, 3.0, 4.0, 5.0],
+    partialAmp: [1.0, 0.30, 0.14, 0.07, 0.035],
+    partialDecay: [1.0, 0.70, 0.50, 0.34, 0.24],
     inharmonic: 0.02,
-    attack: 0.105,
+    attack: 0.105,      // 缓起：吹口要先把气柱吹稳
     decayScale: 0.52,
-    noiseAmt: 0.26,
-    noiseHP: 2400,
+    noiseAmt: 0.38,     // 气声最多（吹口湍流）
+    noiseHP: 2600,      // 气声偏高处
     noiseDecay: 0.34,
     gain: 4.6, tone: 0.58,
     sub: 0.0,
-    sawMix: 0.30
+    sawMix: 0.10        // 锯齿含 1/n 全谐波；给一点让气声有载体，多了则高次变平
   },
-  xun: {          // 埙：陶质闭管，偶次泛音突出，低频共鸣厚
-    partials: [1.0, 2.0, 3.0, 4.0],
-    partialAmp: [1.0, 0.52, 0.14, 0.05],
-    partialDecay: [1.0, 0.64, 0.34, 0.20],
-    inharmonic: 0.10,
+  xun: {          // 埙：陶质闭管（一端封闭），只含奇次谐波，腔体共鸣厚
+    // 闭管封闭端为波节、开口端为波腹，偶次谐波无法驻留 —— 故只剩 1/3/5/7 次。
+    // 旧参数按「偶次泛音突出」写，与闭管物理相反，且与箫仅差一个 H2，两器听感雷同。
+    partials: [1.0, 3.0, 5.0, 7.0],
+    partialAmp: [1.0, 0.46, 0.24, 0.11],
+    partialDecay: [1.0, 0.64, 0.40, 0.26],
+    inharmonic: 0.06,
     attack: 0.062,
     decayScale: 0.40,
-    noiseAmt: 0.22,
-    noiseHP: 1200,
+    noiseAmt: 0.26,     // 陶腔气声：闷在低处
+    noiseHP: 900,
     noiseDecay: 0.20,
     gain: 4.9, tone: 0.20,
     sub: 0.52,
-    sawMix: 0.30
+    sawMix: 0.05        // 锯齿含偶次谐波，会毁掉闭管音色，故压到极低
   },
-  guan: {         // 管：横吹开孔，音量充实，泛音明亮
-    partials: [1.0, 2.0, 3.0, 4.0, 5.0],
-    partialAmp: [1.0, 0.52, 0.34, 0.20, 0.11],
-    partialDecay: [1.0, 0.72, 0.56, 0.40, 0.28],
+  guan: {         // 管（筚篥）：双簧开管，泛音最丰富、最明亮，气声少而尖
+    // 双簧激励的谐波比竹管更密，起音也更快。
+    partials: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+    partialAmp: [1.0, 0.58, 0.40, 0.26, 0.16, 0.09],
+    partialDecay: [1.0, 0.72, 0.56, 0.40, 0.30, 0.22],
     inharmonic: 0.03,
-    attack: 0.045,
-    decayScale: 0.46,
-    noiseAmt: 0.19,
-    noiseHP: 3000,
+    attack: 0.045,      // 双簧起音快
+    decayScale: 0.58,
+    noiseAmt: 0.12,     // 气声最少
+    noiseHP: 3800,      // 且尖锐
     noiseDecay: 0.22,
-    gain: 3.9, tone: 0.62,
-    sub: 0.12,
-    sawMix: 0.40
+    gain: 5.2, tone: 0.62,
+    sub: 0.42,          // 低八度支撑：压峰均比，同时补厚双簧的「管身」感
+    sawMix: 0.46
   },
   qing: {         // 磬：玉石片击，清亮干硬，余韵悠长
     partials: [1.0, 2.6, 4.2, 6.1, 8.4],
@@ -761,8 +766,11 @@ class Mixer {
     // 气声：吹管类必备。
     // 气声量以清浊为主导（清则气多而亮，浊则气少而闷），
     // 避免与 brightness 轴相冲突。
+    // 但**频段必须由各器自决**（spec.noiseHP）——箫的吹口湍流在高处、
+    // 埙的陶腔闷在低处、管的双簧最尖；若统一按清浊算，三器的气声会落在
+    // 同一频段，听感又被拉回一处。
     const bp = new SVF(this.sr);
-    bp.set(Math.min(this.sr * 0.4, freq * (1.4 + bright * 2.2)), 0.9);
+    bp.set(Math.min(this.sr * 0.4, spec.noiseHP * (0.75 + bright * 0.75)), 0.9);
     const gAtk = Math.max(1, Math.round(atk * 0.6 * this.sr));
     const gTotal = Math.min(Math.ceil(dur * 0.9 * this.sr), this.n - start);
     const airAmt = spec.noiseAmt * (0.30 + tb.clarity * 0.95) * (0.75 + tb.noise * 0.45);
@@ -1110,10 +1118,35 @@ function ambientStream(L, R, sr, level, rnd) {
   }
 }
 
+/**
+ * 各自然音层的响度校准系数
+ * ---------------------------------------------------------------
+ * 各层内部实现出来的幅度差得很远（溪流的带通状态量只有雨的三分之一，
+ * 篝火/风又是一阶低通，能量集中在低频），而 NATURE_LAYERS.level 只表达
+ * 「该层相对于自身基准的强弱」，不是绝对响度。
+ *
+ * 曾因缺这一层校准，五层单独开启时特征频段提升只有 −0.5~+0.6dB ——
+ * 用户点开音层等于没反应。
+ *
+ * 校准口径取**整体响度**而非「特征频段提升」：窄带层（溪流）在特征频段
+ * 提升 5dB 时，整体能量已达主体的一半以上，会盖过五声；宽带层（雨）则相反。
+ * 现按「层自身 RMS ≈ 主体 RMS 的 25%（约 −12dB）」校准 —— 单开一层清楚可闻，
+ * 五层叠加约为主体的一半，五声仍居主导。
+ * 实测：node scripts/verify-generative.js 第 10 节
+ */
+const NATURE_TRIM = {
+  rain: 2.48,     // 宽带：低通雨体
+  birds: 3.70,    // 窄带：啾声
+  fire: 2.45,     // 低频：柴火轰鸣
+  wind: 2.40,     // 低频：气流
+  stream: 3.25    // 窄带：水石相激（带通状态量最小，系数最大）
+};
+
 function applyNatureLayer(L, R, sr, key, level, rnd) {
   // 一阶滤波噪声的每样本能量随采样率而变（16k 比 44.1k 约响 1.7 倍），
   // 按 √(sr/44100) 归一，使各采样率下音层的相对强弱一致。
-  const lv = level * Math.sqrt(sr / 44100);
+  const trim = NATURE_TRIM[key] === undefined ? 1 : NATURE_TRIM[key];
+  const lv = level * trim * Math.sqrt(sr / 44100);
   switch (key) {
     case 'rain': ambientRain(L, R, sr, lv, rnd); break;
     case 'birds': ambientBirds(L, R, sr, lv, rnd); break;

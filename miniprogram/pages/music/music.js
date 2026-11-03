@@ -389,7 +389,7 @@ Page({
       ambOnText: summary,
       playerTip: summary === '全部关闭'
         ? '音层已全部关闭：只留下五声本体。'
-        : `音层：${summary} —— 下一段即兴起混入。`
+        : `音层：${summary} —— 下一轮即兴生效。`
     });
     this.pushAmbient();
   },

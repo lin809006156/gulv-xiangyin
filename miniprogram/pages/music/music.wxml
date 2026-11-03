@@ -118,7 +118,7 @@
       <text class="amb-vol-num">{{ambLevel}}%</text>
     </view>
 
-    <text class="panel-note">当前：{{ambOnText}}。音层在下一段即兴起混入 —— 小程序端音层混入音频本体，非实时总线。</text>
+    <text class="panel-note">当前：{{ambOnText}}。小程序端音层混入音频本体（非实时总线），改动在下一轮即兴开始时生效。</text>
   </view>
 
   <!-- 乐器园：八音 -->

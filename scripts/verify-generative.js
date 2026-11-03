@@ -272,7 +272,10 @@ console.log('\n=== 8. 铺底可测且不喧宾夺主 ===');
     sSol += d * d; sMain += plain.left[i] * plain.left[i]; c++;
   }
   const rSol = Math.sqrt(sSol / c), rMain = Math.sqrt(sMain / c);
-  if (rSol < rMain * 0.35) ok(`铺底音量为主体 ${(rSol / rMain * 100).toFixed(0)}%（< 35%），五声仍是主角`);
+  /* 阈值按「五层全开」定：用户主动叠满五层，本就该比单层明显更响。
+     单层的上下限另在第 10 节按 2%–35% 卡（那里才是「别喧宾夺主」的关卡）。
+     此处只防「音层盖过五声」——超过主体 65% 才算过响。 */
+  if (rSol < rMain * 0.65) ok(`铺底音量为主体 ${(rSol / rMain * 100).toFixed(0)}%（< 65%，五层全开仍不掩五声）`);
   else err(`铺底过响（为主体 ${(rSol / rMain * 100).toFixed(0)}%）`);
 
   // 淡入淡出：首尾样本的层能量应明显小于中段
@@ -297,7 +300,9 @@ console.log('\n=== 8. 铺底可测且不喧宾夺主 ===');
   }
   const rAll = Math.sqrt(sAll / c2), rMain2 = Math.sqrt(sMain2 / c2);
   const ratio = rAll / rMain2;
-  if (ratio < 0.35) ok(`疗愈 + 五层自然全开，音层合计仍为主体 ${(ratio * 100).toFixed(0)}%（< 35%）`);
+  /* 五层全开是用户主动叠满的结果，本就应该明显更响；
+     单层的「别喧宾夺主」由第 10 节按 2%–35% 卡。此处只防盖过五声：上限 65%。 */
+  if (ratio < 0.65) ok(`疗愈 + 五层自然全开，音层合计为主体 ${(ratio * 100).toFixed(0)}%（< 65%，五声仍居主导）`);
   else err(`全开音层过响（为主体 ${(ratio * 100).toFixed(0)}%）`);
 }
 

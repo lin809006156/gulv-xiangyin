@@ -255,9 +255,26 @@ assert(typeof index.setData === 'function', 'setData 可用');
 index.onLoad();
 assert(index.data.dateCn.length > 0, `日期已渲染：${index.data.dateCn}`);
 assert(index.data.imageGroups.length > 0, `物象库已加载：${index.data.imageGroups.length} 组`);
-assert(index.data.hasResult === true, '自动展示今日之卦');
+// 默认空态：进页面不自动取卦，也不预填起卦依据
+assert(index.data.hasResult === false, '默认不自动取卦（进页面为空白态）');
+assert(index.data.symbol === '' && index.data.name === '', '默认无卦符与卦名');
+assert(index.data.dailyNote === '', '默认不显示起卦依据（否则会撑出一行空隙）');
+
+// 手动取卦后才出结果
+index.castDaily();
+assert(index.data.hasResult === true, '点「取今日之卦」后展示结果');
 assert(index.data.symbol.length > 0, `卦符：${index.data.symbol}`);
 assert(index.data.name.length > 0, `卦名：${index.data.name}`);
+assert(index.data.dailyNote.length > 0, '取卦后填起卦依据');
+// 依据必须与实取之卦一致（曾用当前时辰重算，与归零到子时的取卦结果对不上）
+{
+  const H = require(path.resolve(MP_ROOT, '..', 'core', 'hexagram.js'));
+  const daily = H.dailyHexagram(new Date());
+  assert(index.data.dailyNote.indexOf(`上卦数 ${daily.detail.upperNum}`) >= 0
+    && index.data.dailyNote.indexOf(`下卦数 ${daily.detail.lowerNum}`) >= 0
+    && index.data.dailyNote.indexOf(`动爻 ${daily.detail.movingLine}`) >= 0,
+    '起卦依据与实取之卦一致（不是用当前时辰另算一遍）');
+}
 assert(index.data.yaoList.length === 6, '六爻齐备');
 assert(index.data.musicParams.length === 6, '音乐参数齐备');
 assert(index.data.sections.length === 4, '起承转合四段齐备');

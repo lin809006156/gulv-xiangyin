@@ -187,6 +187,33 @@ console.log('\n=== 1.5 八音响度平衡 与 归一化正确性 ===');
       + rows.map((r, i) => r.v + ' ' + dbs[i].toFixed(1)).join(' / '));
   }
 
+  /* 感知响度（RMS）：峰值归一化只能保证「尖峰一样高」，保证不了「听起来一样响」。
+     波形峰均比高的乐器（管：锯齿 + 高次谐波密）在峰值拉满后 RMS 仍偏低，
+     实测管比箫轻约 5.7dB，听感上「弱而薄」。
+     持续音乐器须落在同一响度带；打击乐（柷敔、鼓）能量本就集中在极短瞬态，
+     RMS 天然低得多（柷敔约 −14dB），不参与此判据。 */
+  {
+    const PERCUSSIVE = { zhu: 1, gu: 1 };
+    const rmsRows = VOICES.map((v) => {
+      const pcm = R.renderScore(A.buildAuditionScore(v), { sampleRate: 22050 });
+      let e = 0;
+      for (let i = 0; i < pcm.left.length; i++) e += pcm.left[i] * pcm.left[i];
+      return { v, rms: Math.sqrt(e / pcm.left.length) };
+    });
+    const tonal = rmsRows.filter((r) => !PERCUSSIVE[r.v]);
+    const maxTonal = Math.max(...tonal.map((r) => r.rms)) || 1e-9;
+    const tonalDb = tonal.map((r) => 20 * Math.log10(r.rms / maxTonal));
+    const tonalSpread = Math.max(...tonalDb) - Math.min(...tonalDb);
+    console.log('  持续音乐器感知响度（RMS）：'
+      + tonal.map((r, i) => r.v + ' ' + tonalDb[i].toFixed(1)).join(' / '));
+    if (tonalSpread <= 8) {
+      ok(`持续音乐器响度跨度 ${tonalSpread.toFixed(1)} dB（≤8dB，不会有的像没响）`);
+    } else {
+      err(`持续音乐器响度跨度 ${tonalSpread.toFixed(1)} dB 偏大（应 ≤8dB）—— `
+        + '峰均比高的乐器在峰值归一后仍会偏轻');
+    }
+  }
+
   const liars = rows.filter((r) => Math.abs(r.reported - r.both) > 1e-3);
   if (!liars.length) {
     ok('pcm.peak 与实际输出一致（导出与削波判断可据此进行）');

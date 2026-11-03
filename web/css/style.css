@@ -256,12 +256,16 @@ body {
   margin-bottom: 14px;
   line-height: 1.7;
 }
+/* 面板主操作按钮：独占一行，不与正文挤在一处 */
+.panel-action { display: flex; margin-top: 2px; }
 .panel-note {
   margin-top: 10px;
   font-size: 12px;
   color: var(--ink-3);
   line-height: 1.7;
 }
+/* 内容为空时完全消失，不占位（否则会撑出一行空隙，看着像按钮被夹在文字中） */
+.panel-note:empty { display: none; }
 
 /* ============ 按钮 ============ */
 

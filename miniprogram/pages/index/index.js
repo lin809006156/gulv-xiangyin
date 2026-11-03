@@ -70,7 +70,7 @@ Page({
   onLoad() {
     this.miniBind();
     this.initData();
-    this.castDaily();
+    // 不自动取卦：进页面为空白态，由用户点「取今日之卦」触发
   },
 
   onShow() {
@@ -108,15 +108,19 @@ Page({
         }))
       }))
     });
-    this.updateDailyNote();
+    this.setData({ dailyNote: '' });
   },
 
-  updateDailyNote() {
-    const d = new Date();
-    const yearZhi = H.getYearZhiIndex(d);
-    const detail = H.timeHexagram(d).detail;
+  /**
+   * 起卦依据：用**该卦自己**的 detail。
+   * 不可用 new Date() 的当前时辰重算 —— dailyHexagram 归零到当日子时，
+   * 两者算出的卦数会对不上（实测午时显示风雷益、实取风水涣）。
+   */
+  updateDailyNote(detail) {
+    if (!detail) { this.setData({ dailyNote: '' }); return; }
     this.setData({
-      dailyNote: `年支${H.ZHI_ORDER[yearZhi - 1]} · ${detail.month}月${detail.day}日 · ${detail.shi}时　→　上卦数 ${detail.upperNum}，下卦数 ${detail.lowerNum}，动爻 ${detail.movingLine}`
+      dailyNote: `年支${detail.yearZhi} · ${detail.month}月${detail.day}日 · ${detail.shi}时`
+        + `　→　上卦数 ${detail.upperNum}，下卦数 ${detail.lowerNum}，动爻 ${detail.movingLine}`
     });
   },
 
@@ -156,7 +160,9 @@ Page({
    * ============================================================= */
 
   castDaily() {
-    this.present(H.dailyHexagram(new Date()));
+    const result = H.dailyHexagram(new Date());
+    this.present(result);
+    this.updateDailyNote(result.detail);
   },
 
   castImage() {

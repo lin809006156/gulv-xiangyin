@@ -34,9 +34,12 @@
 
     <!-- 每日一卦 -->
     <view wx:if="{{mode === 'daily'}}" class="panel">
-      <text class="panel-desc">依梅花易数时间起卦，以年月日时成卦。同一日之内，此卦恒定不变。</text>
-      <view class="btn btn-primary" bindtap="castDaily">取今日之卦</view>
-      <text class="panel-note">{{dailyNote}}</text>
+      <text class="panel-desc">依梅花易数时间起卦，取当日子时，以年月日时成卦。同一日之内，此卦恒定不变。</text>
+      <!-- 按钮独占一行，其后才是起卦依据；依据默认不渲染，避免空行把按钮夹在中间 -->
+      <view class="panel-action">
+        <view class="btn btn-primary" bindtap="castDaily">取今日之卦</view>
+      </view>
+      <text wx:if="{{dailyNote}}" class="panel-note">{{dailyNote}}</text>
     </view>
 
     <!-- 观象起卦 -->

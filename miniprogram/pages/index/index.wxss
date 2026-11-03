@@ -92,6 +92,9 @@
 
 .panel { display: block; }
 
+/* 面板主操作按钮：独占一行，不与正文挤在一处 */
+.panel-action { display: flex; margin-top: 8rpx; }
+
 /* ---------- 物象选择 ---------- */
 .image-groups { margin-bottom: 24rpx; }
 

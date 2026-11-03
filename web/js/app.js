@@ -1339,7 +1339,7 @@
     player.setAmbient(buildAmbient());
     const label = G.solfeggioForHex(currentResult ? currentResult.hex.n : 1).label;
     $('#playerTip').textContent = ambient.sol.on
-      ? `疗愈音层已开启：${ambient.sol.freq}Hz（${label}）在五声之下极轻铺底，下一段起生效。`
+      ? `疗愈音层已开启：${ambient.sol.freq}Hz（${label}）在五声之下极轻铺底，即时生效。`
       : '疗愈音层已关闭：只留下五声本体。';
     savePref();
     syncAmbientUI();
@@ -1447,7 +1447,7 @@
     if (ambient.sol.on) on.push(`疗愈 ${ambient.sol.freq}Hz（${label}）`);
     G.NATURE_LAYERS.forEach((l) => { if (ambient.nature[l.key]) on.push(l.name); });
     $('#playerTip').textContent = on.length
-      ? `音层：${on.join('、')} —— 下一段即兴起混入。`
+      ? `音层：${on.join('、')} —— 即时生效。`
       : '音层已全部关闭：只留下五声本体。';
   }
 

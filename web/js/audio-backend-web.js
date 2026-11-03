@@ -31,20 +31,25 @@ const NATURE_LAYER_BASE = {
 /**
  * 自然音层的实时合成配方
  * ---------------------------------------------------------------
- * 噪声 → 滤波链 → 增益（对应离线合成的听感特征）。
- * 与 core/render.js 的离线合成一一对应，只是实时执行。
+ * 噪声 → 滤波链 → 增益。滤波**主特征须与 core/render.js 的离线合成一致**，
+ * 否则同名的「雨声」在网页端（实时）和小程序/导出（烘焙）会是两种声音。
+ * 曾出现过：离线雨是 lowpass 1100 的雨体，实时雨却是 highpass 900 + peak 3800
+ * 的高频沙沙声。
+ *
+ * gain 与 core/render.js 的 NATURE_TRIM 对齐（gain = TRIM / 2.6），
+ * 使同一声层在两端响度相当。复核：node scripts/verify-ambient.js
  * ============================================================= */
 const LIVE_NATURE_RECIPES = {
-  // 雨：高频雨幕 + 中低频的厚实感
-  rain: { filters: [['highpass', 900, 0.7], ['peaking', 3800, 1.0, 5]], gain: 0.85, lfo: null },
-  // 鸟鸣：窄带啾声，间歇性开合
-  birds: { filters: [['bandpass', 2650, 7], ['highpass', 1600, 0.7]], gain: 1.35, lfo: { hz: 0.33, depth: 0.85 } },
-  // 篝火：低频柴火轰鸣，缓慢起伏
-  fire: { filters: [['lowpass', 430, 0.9]], gain: 1.5, lfo: { hz: 0.47, depth: 0.35 } },
-  // 风声：低中频气流，深缓呼吸
-  wind: { filters: [['bandpass', 300, 1.1]], gain: 1.6, lfo: { hz: 0.09, depth: 0.75 } },
-  // 溪流：中高频水石相激的连续细响
-  stream: { filters: [['bandpass', 1750, 1.3], ['highpass', 780, 0.7]], gain: 1.0, lfo: null }
+  // 雨：低通雨体（离线 1100Hz 一阶低通）+ 轻微高频雨点
+  rain: { filters: [['lowpass', 1100, 0.7], ['peaking', 2600, 1.0, 3]], gain: 0.50, lfo: null },
+  // 鸟鸣：窄带啾声（离线 1700–4300Hz 滑音），间歇性开合
+  birds: { filters: [['bandpass', 2600, 6], ['highpass', 1500, 0.7]], gain: 0.53, lfo: { hz: 0.33, depth: 0.85 } },
+  // 篝火：低频柴火轰鸣（离线低通 800）
+  fire: { filters: [['lowpass', 800, 0.9]], gain: 0.64, lfo: { hz: 0.47, depth: 0.35 } },
+  // 风声：低中频气流（离线 fc 240–940 随呼吸起伏）
+  wind: { filters: [['lowpass', 500, 0.8]], gain: 0.59, lfo: { hz: 0.09, depth: 0.75 } },
+  // 溪流：中频带通（离线带通 1400 Q1.1）
+  stream: { filters: [['bandpass', 1400, 1.1]], gain: 0.51, lfo: null }
 };
 
 /**
@@ -416,9 +421,9 @@ class WebBackend {
 
 /* 导出 */
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { WebBackend, LIVE_NATURE_RECIPES, makeNoiseBuffer };
+  module.exports = { WebBackend, LIVE_NATURE_RECIPES, NATURE_LAYER_BASE, makeNoiseBuffer };
 } else {
-  window.ICWebBackend = { WebBackend, LIVE_NATURE_RECIPES, makeNoiseBuffer };
+  window.ICWebBackend = { WebBackend, LIVE_NATURE_RECIPES, NATURE_LAYER_BASE, makeNoiseBuffer };
 }
 
 })();

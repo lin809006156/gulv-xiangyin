@@ -9,6 +9,7 @@
 
 const HISTORY_KEY = 'gx_history';
 const PREF_KEY = 'gx_pref';
+const STATS_KEY = 'gx_stats';
 
 /** 读取 JSON 数据 */
 function read(key, fallback) {
@@ -52,6 +53,37 @@ function clearHistory() {
   }
 }
 
+/**
+ * 使用统计（只存本机，不上传）
+ * ---------------------------------------------------------------
+ *   totalSec   累计听音秒数（播放中每 5 秒累加，暂停不计）
+ *   castCount  累计起卦次数
+ *   firstDay   首次使用日期 'YYYY-M-D'
+ *   lastDay    最近一次使用日期
+ */
+function todayKey(d) {
+  const t = d || new Date();
+  return `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`;
+}
+
+function loadStats() {
+  const s = read(STATS_KEY, {}) || {};
+  return {
+    totalSec: typeof s.totalSec === 'number' ? s.totalSec : 0,
+    castCount: typeof s.castCount === 'number' ? s.castCount : 0,
+    firstDay: s.firstDay || todayKey(),
+    lastDay: s.lastDay || todayKey()
+  };
+}
+
+function saveStats(stats) {
+  return write(STATS_KEY, stats || {});
+}
+
+function clearStats() {
+  try { wx.removeStorageSync(STATS_KEY); } catch (e) { console.warn('清空统计失败', e); }
+}
+
 /** 读取偏好 */
 function loadPref() {
   return read(PREF_KEY, {});
@@ -81,9 +113,10 @@ function fmtTime(sec) {
 }
 
 module.exports = {
-  HISTORY_KEY, PREF_KEY,
+  HISTORY_KEY, PREF_KEY, STATS_KEY,
   read, write,
   loadHistory, saveHistory, clearHistory,
   loadPref, savePref,
+  loadStats, saveStats, clearStats, todayKey,
   formatCnDate, fmtTime
 };

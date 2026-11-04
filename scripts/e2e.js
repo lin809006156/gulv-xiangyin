@@ -1344,11 +1344,13 @@ class CDP {
     returnByValue: true
   });
   const tv = tabs.result.value;
-  tv.tabCount === 3 ? ok('底部标签栏三栏') : err(`标签栏数量异常：${tv.tabCount}`);
-  tv.tabPages.join(',') === 'cast,music,learn'
-    ? ok('栏位顺序：起卦 / 音乐 / 学易')
+  // v1.4.3 起新增第四栏「我的」，故为四栏
+  tv.tabCount === 4 ? ok('底部标签栏四栏') : err(`标签栏数量异常：${tv.tabCount}`);
+  tv.tabPages.join(',') === 'cast,music,learn,mine'
+    ? ok('栏位顺序：起卦 / 音乐 / 学易 / 我的')
     : err(`栏位顺序异常：${tv.tabPages.join(',')}`);
-  tv.middleIsMusic ? ok('音乐栏位于中间') : err('音乐栏不在中间');
+  // 四栏时音乐是第二栏（原三栏时它在正中）
+  tv.tabPages[1] === 'music' ? ok('音乐栏位于第二位') : err('音乐栏位置异常');
   (tv.tabHasIcon && tv.tabHasText) ? ok('每栏均有图标 + 文字') : err('栏目标签缺图标或文字');
   tv.musicActive ? ok('点击后切换到音乐栏') : err('音乐栏切换失败');
   (tv.musicNowVisible && tv.musicEmptyHidden) ? ok('起卦后心音直达音乐栏') : err('音乐栏未同步卦象');
@@ -1411,6 +1413,103 @@ class CDP {
   (tv.afterName === '地天泰' && tv.backToCast)
     ? ok(`「以此卦起卦」生效：${tv.beforeName} → ${tv.afterName}，并切回起卦栏`)
     : err(`以此卦起卦异常：${tv.beforeName} → ${tv.afterName}`);
+
+  /* ---------- 2k. 我的：入口、历史、数据管理、联系 ---------- */
+  console.log('\n【2k】我的页');
+  {
+    const mk = await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const out = {};
+        // 入口：底部应为四栏，第四栏是「我的」
+        const tabs = Array.from(document.querySelectorAll('.tabbtn'));
+        out.tabs = tabs.map(b => b.dataset.page);
+        out.tabTexts = tabs.map(b => b.textContent.trim());
+
+        // 先切回起卦并取一卦，保证历史非空
+        document.querySelector('.tabbtn[data-page="cast"]').click();
+        const dailyBtn = document.querySelector('#btnDaily');
+        if (dailyBtn) dailyBtn.click();
+
+        document.querySelector('.tabbtn[data-page="mine"]').click();
+        out.shown = document.querySelector('#pageMine').classList.contains('is-active');
+        out.active = (document.querySelector('.tabbtn.is-active') || {}).dataset.page;
+        out.meta = (document.querySelector('#mineMeta') || {}).textContent || '';
+        out.badge = (document.querySelector('#histCount') || {}).textContent || '';
+        out.items = document.querySelectorAll('#mineHistory .mine-item').length;
+        out.first = (() => {
+          const i = document.querySelector('#mineHistory .mine-item');
+          return i ? i.textContent.replace(/\s+/g, ' ').trim().slice(0, 40) : '';
+        })();
+        // 历史条目可点：点击后应回到起卦栏
+        const item = document.querySelector('#mineHistory .mine-item');
+        if (item) { item.click(); out.backToCast = document.querySelector('#pageCast').classList.contains('is-active'); }
+        document.querySelector('.tabbtn[data-page="mine"]').click();
+
+        // 数据管理三行 + 偏好两行
+        out.rows = Array.from(document.querySelectorAll('#pageMine .mine-row'))
+          .map(r => (r.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 12));
+
+        // 联系
+        const mail = document.querySelector('.mine-mail');
+        out.mail = mail ? mail.textContent.trim() : '';
+        out.mailHref = mail ? mail.getAttribute('href') : '';
+
+        // 外观三段与顶部设置共享同一状态
+        const nightBtn = document.querySelector('#prefSkin .tab[data-skin="night"]');
+        if (nightBtn) nightBtn.click();
+        out.skinApplied = document.documentElement.getAttribute('data-skin');
+        const topNight = document.querySelector('#skinList .skin-opt[data-key="night"]');
+        out.skinTopSynced = topNight ? topNight.classList.contains('is-on') : null;
+        const paperBtn = document.querySelector('#prefSkin .tab[data-skin="paper"]');
+        if (paperBtn) paperBtn.click();
+
+        // 默认起卦方式写入偏好
+        const numBtn = document.querySelector('#prefCastMode .tab[data-mode="number"]');
+        if (numBtn) numBtn.click();
+        try { out.prefMode = JSON.parse(localStorage.getItem('gulv-xiangyin-pref') || '{}').defaultCastMode; } catch (e) { out.prefMode = ''; }
+        const dailyTab = document.querySelector('#prefCastMode .tab[data-mode="daily"]');
+        if (dailyTab) dailyTab.click();
+
+        // 统计结构存在
+        try { out.stats = JSON.parse(localStorage.getItem('gulv-xiangyin-stats') || 'null'); } catch (e) { out.stats = null; }
+
+        document.querySelector('.tabbtn[data-page="cast"]').click();
+        return out;
+      })()`,
+      returnByValue: true
+    });
+    const o = mk.result.value;
+    (o.tabs.length === 4 && o.tabs[3] === 'mine')
+      ? ok(`底部四栏，第四栏为「我的」：${o.tabTexts.join(' / ')}`)
+      : err(`底部栏异常：${o.tabs.join(',')}`);
+    (o.shown && o.active === 'mine')
+      ? ok('点「我的」切到个人页')
+      : err('「我的」页未激活');
+    /已陪伴 \d+ 天 · 起卦 \d+ 次 · 累计听音/.test(o.meta)
+      ? ok(`名片：${o.meta}`)
+      : err(`名片文案异常：${o.meta}`);
+    o.items >= 1
+      ? ok(`历史记录 ${o.items} 条（${o.badge}），首条：${o.first}`)
+      : err('历史记录为空');
+    o.backToCast
+      ? ok('点历史条目可回到起卦栏重看该卦')
+      : err('点历史条目未回到起卦栏');
+    (o.rows.length >= 5 && o.rows.some(r => r.indexOf('导出历史') >= 0) && o.rows.some(r => r.indexOf('清空历史') >= 0))
+      ? ok(`数据管理与偏好共 ${o.rows.length} 行`)
+      : err(`设置行不全：${o.rows.join(' | ')}`);
+    (o.mail === '809006156@qq.com' && o.mailHref === 'mailto:809006156@qq.com')
+      ? ok(`联系我们：${o.mail}（可点开发信）`)
+      : err(`邮箱异常：${o.mail} / ${o.mailHref}`);
+    (o.skinApplied === 'night' && o.skinTopSynced === true)
+      ? ok('外观三段与顶部设置共用同一状态（切夜阑后设置面板同步）')
+      : err(`外观未同步：applied=${o.skinApplied} top=${o.skinTopSynced}`);
+    (o.prefMode === 'number')
+      ? ok('默认起卦方式写入偏好')
+      : err(`默认起卦方式未保存：${o.prefMode}`);
+    (o.stats && typeof o.stats.totalSec === 'number' && typeof o.stats.castCount === 'number')
+      ? ok(`使用统计已落盘：听音 ${o.stats.totalSec}s、起卦 ${o.stats.castCount} 次`)
+      : err('使用统计未落盘');
+  }
 
   /* ---------- 3. 音频渲染与播放 ---------- */
   console.log('\n【3】音频渲染与播放');

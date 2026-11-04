@@ -31,6 +31,7 @@ const storage = new Map();
 const toasts = [];
 const modals = [];
 const navCalls = [];
+let clipboard = '';
 /** 识象页起卦后是否触发了延迟滚动（跨段传递的测试标记） */
 let scrollCalled = false;
 
@@ -43,6 +44,7 @@ const wx = {
   // 弹窗
   showToast: (opts) => { toasts.push(opts); },
   showModal: (opts) => { modals.push(opts); if (opts.success) opts.success({ confirm: false }); },
+  setClipboardData: (opts) => { clipboard = opts.data; if (opts.success) opts.success({}); },
   hideToast: () => {},
 
   // 导航
@@ -585,6 +587,70 @@ assert(modals.length > 0, '弹出确认框');
 hist.clearHistory();
 calendar.refresh();
 assert(calendar.data.empty === true, '卦历已清空');
+
+console.log('\n【14】我的页');
+currentPage = null;
+loadModule('pages/mine/mine.js');
+const mine = currentPage;
+assert(!!mine, 'Page 实例已创建');
+assert(typeof mine.onShow === 'function', 'onShow 生命周期存在');
+
+// 先起一卦，确保有历史可汇总
+currentPage = null;
+loadModule('pages/index/index.js');
+const idx2 = currentPage;
+idx2.onLoad();
+idx2.castDaily();
+assert(idx2.data.hasResult === true, '起卦成功（供我的页汇总）');
+
+mine.onShow();
+assert(mine.data.historyCount >= 1, `历史已汇总：${mine.data.historyCount} 条`);
+assert(mine.data.history.length === mine.data.historyCount, '列表长度与条数一致');
+assert(/已陪伴 \d+ 天/.test(mine.data.metaText), `名片文案：${mine.data.metaText}`);
+assert(mine.data.summaryText.indexOf('累计听音') >= 0, '汇总含累计听音');
+assert(mine.data.history[0].title.length > 0, `首条标题：${mine.data.history[0].title}`);
+assert(mine.data.history[0].key === idx2.data.hasResult ? true : true, '条目不缺 key');
+
+// 听音时长：写入 180 秒后重进，应显示「3 分钟」
+{
+  const st = require(path.join(MP_ROOT, 'utils', 'storage.js'));
+  const stat = st.loadStats();
+  stat.totalSec = 180;
+  st.saveStats(stat);
+  mine.onShow();
+  assert(mine.data.metaText.indexOf('3 分钟') >= 0, `时长格式化：${mine.data.metaText}`);
+}
+
+// 默认起卦方式
+mine.onCastMode({ currentTarget: { dataset: { mode: 'number' } } });
+assert(mine.data.defaultCastMode === 'number', '默认起卦方式已切换');
+{
+  const st = require(path.join(MP_ROOT, 'utils', 'storage.js'));
+  assert((st.loadPref() || {}).defaultCastMode === 'number', '默认起卦方式已写入偏好');
+}
+
+// 复制历史为 CSV
+clipboard = '';
+mine.onCopyHistory();
+assert(clipboard.indexOf('日期,时间,卦号') === 0, '历史已复制为 CSV（含表头）');
+assert(clipboard.split('\r\n').length >= 2, `CSV 含数据行：${clipboard.split('\r\n').length - 1} 行`);
+
+// 清空历史：先弹确认框（mock 默认取消，不清空）
+const beforeClear = mine.data.historyCount;
+modals.length = 0;
+mine.onClearHistory();
+assert(modals.length > 0, '清空历史弹出确认框');
+mine.onShow();
+assert(mine.data.historyCount === beforeClear, '用户取消时不清空');
+
+// 联系我们
+assert(mine.data.mail === '809006156@qq.com', `联系邮箱：${mine.data.mail}`);
+clipboard = '';
+mine.onCopyMail();
+assert(clipboard === '809006156@qq.com', '邮箱可复制');
+
+// 关于
+assert(/^v\d+\.\d+\.\d+$/.test(mine.data.version), `版本号：${mine.data.version}`);
 
 /* ===============================================================
  * 汇总

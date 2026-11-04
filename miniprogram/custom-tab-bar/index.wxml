@@ -28,11 +28,18 @@
           </view>
         </block>
         <!-- 三、学易：书册 -->
-        <block wx:else>
+        <block wx:elif="{{index === 2}}">
           <view class="tb-shape tb-book">
             <view class="tb-page left"></view>
             <view class="tb-spine"></view>
             <view class="tb-page right"></view>
+          </view>
+        </block>
+        <!-- 四、我的：人形 -->
+        <block wx:else>
+          <view class="tb-shape tb-user">
+            <view class="tb-head"></view>
+            <view class="tb-body"></view>
           </view>
         </block>
       </view>

@@ -1,0 +1,127 @@
+<!-- 古律象音 · 我的 -->
+<view class="page mine-page">
+
+  <!-- 名片 -->
+  <view class="glass-card">
+    <view class="mine-hero">
+      <view class="mine-avatar">☯</view>
+      <view class="mine-id">
+        <text class="mine-name">古律象音</text>
+        <text class="mine-meta">{{metaText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 历史记录 -->
+  <view class="glass-card">
+    <view class="card-head">
+      <text class="ch-title">历史记录</text>
+      <text class="ch-note">{{historyCount}} 条</text>
+    </view>
+    <text class="panel-note" wx:if="{{summaryText}}">{{summaryText}}</text>
+
+    <view class="mi-list">
+      <view
+        class="mi-item"
+        wx:for="{{history}}"
+        wx:key="key"
+        data-n="{{item.n}}"
+        bindtap="onReplay"
+      >
+        <text class="mi-symbol">{{item.symbol}}</text>
+        <view class="mi-body">
+          <text class="mi-name">{{item.title}}</text>
+          <text class="mi-hint">{{item.method}}</text>
+        </view>
+        <view class="mi-right">
+          <text class="mi-date">{{item.date}} {{item.time}}</text>
+          <text class="mi-dur" wx:if="{{item.durText}}">听了 {{item.durText}}</text>
+        </view>
+      </view>
+      <view class="mi-empty" wx:if="{{history.length === 0}}">还没有记录。去「起卦」取一卦吧。</view>
+    </view>
+  </view>
+
+  <!-- 数据管理 -->
+  <view class="glass-card">
+    <view class="card-head">
+      <text class="ch-title">数据管理</text>
+    </view>
+    <text class="panel-desc">全部数据只存在这台手机上，不上传、无需登录。</text>
+
+    <view class="mine-rows">
+      <view class="mine-row" bindtap="onCopyHistory">
+        <view class="mine-row-main">
+          <text class="mine-row-title">复制历史记录</text>
+          <text class="mine-row-sub">CSV 文本，粘到表格即可打开</text>
+        </view>
+        <text class="mine-row-arrow">›</text>
+      </view>
+      <view class="mine-row is-danger" bindtap="onClearHistory">
+        <view class="mine-row-main">
+          <text class="mine-row-title">清空历史记录</text>
+          <text class="mine-row-sub">不可恢复</text>
+        </view>
+        <text class="mine-row-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 偏好设置 -->
+  <view class="glass-card">
+    <view class="card-head">
+      <text class="ch-title">偏好设置</text>
+    </view>
+
+    <view class="mine-rows">
+      <view class="mine-row is-static is-stack">
+        <view class="mine-row-main">
+          <text class="mine-row-title">进入时默认</text>
+          <text class="mine-row-sub">起卦方式</text>
+        </view>
+        <view class="mine-seg">
+          <view
+            class="mine-seg-item {{defaultCastMode === item.key ? 'is-on' : ''}}"
+            wx:for="{{castModes}}"
+            wx:key="key"
+            data-mode="{{item.key}}"
+            bindtap="onCastMode"
+          >{{item.label}}</view>
+        </view>
+      </view>
+
+      <view class="mine-row" bindtap="onResetPref">
+        <view class="mine-row-main">
+          <text class="mine-row-title">恢复默认设置</text>
+          <text class="mine-row-sub">音量、音层、外观一并复位</text>
+        </view>
+        <text class="mine-row-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 联系我们 -->
+  <view class="glass-card">
+    <view class="card-head">
+      <text class="ch-title">联系我们</text>
+    </view>
+    <text class="panel-desc">用得顺手也好，遇到问题也好，都欢迎来信。</text>
+    <text class="mine-mail">{{mail}}</text>
+    <view class="mine-actions">
+      <view class="btn btn-ghost btn-sm" bindtap="onCopyMail">复制邮箱</view>
+    </view>
+  </view>
+
+  <!-- 关于 -->
+  <view class="glass-card">
+    <view class="card-head">
+      <text class="ch-title">关于</text>
+    </view>
+    <view class="mine-about">
+      <text class="mine-about-title">古律象音 <text class="mine-ver">{{version}}</text></text>
+      <text class="mine-about-p">以《周易》卦象与古代律吕文化为灵感，生成供个人赏析与静心的音乐。属传统文化与艺术创作，不含任何预测功效。</text>
+      <text class="mine-about-p">五音之说是传统音乐与养生观念，非现代医学结论，不可替代医疗与专业建议。</text>
+    </view>
+  </view>
+
+</view>

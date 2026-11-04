@@ -1,0 +1,258 @@
+/* 古律象音 · 我的（小程序端）
+   与网页端同一套设计语言；尺寸用 rpx，底部给悬浮标签栏让位。 */
+
+/* .glass-card 自带 24rpx 左右外边距，此处不再加左右 padding，否则会双重缩进；
+   底部留出悬浮标签栏的高度 */
+.mine-page {
+  padding-bottom: 180rpx;
+}
+
+/* ---------- 名片 ---------- */
+.mine-hero {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.mine-avatar {
+  width: 96rpx;
+  height: 96rpx;
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 46rpx;
+  color: var(--cinnabar);
+  background: radial-gradient(circle at 34% 30%, #fffdf8, rgba(178, 58, 46, .12));
+  box-shadow: 0 0 0 1rpx rgba(178, 160, 132, .24), 0 8rpx 24rpx rgba(178, 58, 46, .12);
+}
+
+.mine-id {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  min-width: 0;
+}
+
+.mine-name {
+  font-size: 32rpx;
+  font-weight: 700;
+  letter-spacing: .06em;
+  color: var(--ink);
+}
+
+.mine-meta {
+  font-size: 23rpx;
+  color: var(--ink-3);
+  letter-spacing: .02em;
+}
+
+/* ---------- 历史列表 ---------- */
+.mi-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.mi-item {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 20rpx 4rpx;
+  border-bottom: 1rpx solid var(--line-soft);
+}
+
+.mi-item:last-child {
+  border-bottom: none;
+}
+
+.mi-symbol {
+  font-size: 44rpx;
+  line-height: 1;
+  flex: none;
+  width: 56rpx;
+  text-align: center;
+  color: var(--ink);
+}
+
+.mi-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.mi-name {
+  font-size: 27rpx;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mi-hint {
+  font-size: 22rpx;
+  color: var(--ink-4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mi-right {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4rpx;
+}
+
+.mi-date {
+  font-size: 22rpx;
+  color: var(--ink-4);
+}
+
+.mi-dur {
+  font-size: 21rpx;
+  color: var(--indigo);
+}
+
+.mi-empty {
+  padding: 36rpx 8rpx;
+  text-align: center;
+  font-size: 25rpx;
+  color: var(--ink-4);
+}
+
+/* ---------- 设置行 ---------- */
+.mine-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.mine-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 26rpx 4rpx;
+  border-bottom: 1rpx solid var(--line-soft);
+}
+
+.mine-row:last-child {
+  border-bottom: none;
+}
+
+.mine-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.mine-row-title {
+  font-size: 27rpx;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.mine-row-sub {
+  font-size: 22rpx;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+
+.mine-row-arrow {
+  flex: none;
+  font-size: 34rpx;
+  line-height: 1;
+  color: var(--ink-4);
+}
+
+.mine-row.is-danger .mine-row-title {
+  color: var(--cinnabar);
+}
+
+.mine-row.is-danger .mine-row-sub,
+.mine-row.is-danger .mine-row-arrow {
+  color: var(--cinnabar);
+  opacity: .62;
+}
+
+/* 含分段器的行：文字在上、选项在下，避免窄屏互相挤压 */
+.mine-row.is-stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16rpx;
+}
+
+/* ---------- 分段选择器 ---------- */
+.mine-seg {
+  display: flex;
+  gap: 8rpx;
+  padding: 6rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, .55);
+  box-shadow: inset 0 0 0 1rpx rgba(178, 160, 132, .22);
+}
+
+.mine-seg-item {
+  flex: 1;
+  text-align: center;
+  padding: 12rpx 0;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: var(--ink-3);
+  transition: all .18s ease;
+}
+
+.mine-seg-item.is-on {
+  background: linear-gradient(150deg, var(--cinnabar-lt), var(--cinnabar));
+  color: #FFF8F0;
+  font-weight: 600;
+  box-shadow: 0 4rpx 14rpx rgba(178, 58, 46, .24);
+}
+
+/* ---------- 联系我们 ---------- */
+.mine-mail {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 31rpx;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--cinnabar);
+}
+
+.mine-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 22rpx;
+}
+
+/* ---------- 关于 ---------- */
+.mine-about {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.mine-about-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.mine-ver {
+  font-size: 23rpx;
+  font-weight: 400;
+  color: var(--ink-4);
+  margin-left: 8rpx;
+}
+
+.mine-about-p {
+  font-size: 23rpx;
+  line-height: 1.75;
+  color: var(--ink-3);
+}

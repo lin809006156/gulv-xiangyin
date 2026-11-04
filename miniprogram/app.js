@@ -103,6 +103,51 @@ App({
     } catch (e) {
       console.error('预热失败', e);
     }
+
+    // 听音计时（「我的」页的使用时长由此累计）
+    this._startListenClock();
+  },
+
+  /* ===============================================================
+   * 使用统计：听音时长
+   * ---------------------------------------------------------------
+   * 播放中每 5 秒累加一次，暂停不计；每满 20 秒落盘一次，减少写存储。
+   * 数据只在本机（wx storage），不上传。
+   * =============================================================== */
+
+  _startListenClock() {
+    const store = require('./utils/storage.js');
+    this._store = store;
+    this._stats = store.loadStats();
+    this._listenAcc = 0;
+    if (this._listenTimer) return;
+    this._listenTimer = setInterval(() => {
+      const p = this.globalData.player;
+      if (!p || !p.isPlaying || p.paused) return;
+      this._stats.totalSec += 5;
+      this._stats.lastDay = store.todayKey();
+      this._listenAcc += 5;
+      if (this._listenAcc >= 20) this.flushStats();
+    }, 5000);
+  },
+
+  /** 把这段听音时长写盘，并记到当前卦的历史条目上 */
+  flushStats() {
+    const store = this._store;
+    if (!store) return;
+    if (this._listenAcc > 0) {
+      const key = this.globalData.currentCastKey;
+      if (key) {
+        const list = store.loadHistory();
+        const idx = list.findIndex((h) => h.key === key);
+        if (idx >= 0) {
+          list[idx].listenSec = (list[idx].listenSec || 0) + this._listenAcc;
+          store.saveHistory(list);
+        }
+      }
+      this._listenAcc = 0;
+    }
+    store.saveStats(this._stats);
   },
 
   onHide() {

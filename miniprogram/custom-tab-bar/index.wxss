@@ -124,3 +124,19 @@
   background: currentColor;
   opacity: .42;
 }
+
+/* ---------- 四、我的：人形（头 + 肩） ---------- */
+.tb-shape.tb-user .tb-head {
+  position: absolute;
+  left: 10rpx; top: 0;
+  width: 16rpx; height: 16rpx;
+  border-radius: 50%;
+  background: currentColor;
+}
+.tb-shape.tb-user .tb-body {
+  position: absolute;
+  left: 2rpx; bottom: 1rpx;
+  width: 32rpx; height: 15rpx;
+  border-radius: 16rpx 16rpx 4rpx 4rpx;
+  background: currentColor;
+}

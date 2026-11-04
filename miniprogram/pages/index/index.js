@@ -70,7 +70,17 @@ Page({
   onLoad() {
     this.miniBind();
     this.initData();
+    this.applyDefaultMode();
     // 不自动取卦：进页面为空白态，由用户点「取今日之卦」触发
+  },
+
+  /** 按偏好切到默认起卦方式（在「我的 → 偏好设置」里设置） */
+  applyDefaultMode() {
+    const pref = store.loadPref() || {};
+    const mode = pref.defaultCastMode;
+    if (mode === 'image' || mode === 'number') {
+      this.setData({ mode });
+    }
   },
 
   onShow() {
@@ -328,8 +338,11 @@ Page({
     const now = new Date();
     const key = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${reading.n}`;
     const filtered = list.filter((h) => h.key !== key);
+    // 同日同卦重取：保留此前累计的收听时长
+    const prev = list.filter((h) => h.key === key)[0];
     filtered.unshift({
       key,
+      listenSec: (prev && prev.listenSec) || 0,
       n: reading.n,
       name: reading.name,
       symbol: reading.symbol,
@@ -340,6 +353,13 @@ Page({
       time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
     });
     store.saveHistory(filtered);
+
+    // 记下当前卦：听音计时据此把时长记到这一条上
+    app.globalData.currentCastKey = key;
+    const stats = store.loadStats();
+    stats.castCount += 1;
+    stats.lastDay = store.todayKey(now);
+    store.saveStats(stats);
   },
 
   /* =============================================================

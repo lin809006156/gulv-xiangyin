@@ -10,7 +10,8 @@ Component({
     list: [
       { pagePath: '/pages/index/index', text: '起卦' },
       { pagePath: '/pages/music/music', text: '音乐' },
-      { pagePath: '/pages/learn/learn', text: '学易' }
+      { pagePath: '/pages/learn/learn', text: '学易' },
+      { pagePath: '/pages/mine/mine', text: '我的' }
     ]
   },
   methods: {

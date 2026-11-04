@@ -26,6 +26,7 @@
 
   const STORAGE_KEY = 'gulv-xiangyin-history';
   const PREF_KEY = 'gulv-xiangyin-pref';
+  const STATS_KEY = 'gulv-xiangyin-stats';
 
   let currentResult = null;
   let currentScore = null;
@@ -77,7 +78,7 @@
    * 三栏导航
    * =============================================================== */
 
-  const PAGE_NAMES = { cast: 'pageCast', music: 'pageMusic', learn: 'pageLearn' };
+  const PAGE_NAMES = { cast: 'pageCast', music: 'pageMusic', learn: 'pageLearn', mine: 'pageMine' };
 
   function switchPage(name) {
     const id = PAGE_NAMES[name];
@@ -93,6 +94,8 @@
     window.scrollTo(0, 0);
     // 音乐栏的卦体需要常驻绘制（静止时也要看得到立体模型）
     if (name === 'music') startViz();
+    // 「我的」每次进入都重新汇总（历史与时长可能在别处变了）
+    if (name === 'mine') renderMine();
   }
 
   function bindTabbar() {
@@ -173,6 +176,12 @@
     bindLiquidPress();
     restorePref();
     bindMiniPlayerLayout();
+    // 「我的」：历史汇总、数据管理、偏好、联系
+    bindMine();
+    renderMine();
+    renderDefaultCastMode();
+    applyDefaultCastMode();
+    startListenClock();
     /* 进页面不再自动取卦 —— 由用户点「取今日之卦」触发。
        自动取卦会让首页一进来就堆着结果，且把卦历灌满当日记录。 */
   }
@@ -260,6 +269,10 @@
   function renderSkinOptions() {
     $$('#skinList .skin-opt').forEach((b) => {
       b.classList.toggle('is-on', b.dataset.key === skin);
+    });
+    // 「我的 → 偏好设置」里的外观三段，与顶部设置共用同一份状态
+    $$('#prefSkin .tab').forEach((b) => {
+      b.classList.toggle('is-active', b.dataset.skin === skin);
     });
     $$('#fontRow .seg').forEach((b) => {
       b.classList.toggle('is-on', b.dataset.font === fontSize);
@@ -433,7 +446,7 @@
    */
   function bindVisibility() {
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) return;
+      if (document.hidden) { flushListen(); return; }
       if (!isPlaying || userPaused) return;
       // 系统挂起了音频上下文（切后台）→ 恢复；用户主动暂停则不动
       if (player.contextSuspended) {
@@ -1483,9 +1496,10 @@
     if (num) num.textContent = `${Math.round(ambient.level * 100)}%`;
   }
 
-  async function exportWav() {
-    const btn = $('#btnExport');
-    const old = btn.textContent;
+  async function exportWav(btnEl) {
+    const btn = btnEl || $('#btnExport');
+    if (!btn) return;
+    const old = btn.innerHTML;
     btn.textContent = '导出中…';
     btn.disabled = true;
     try {
@@ -1507,7 +1521,7 @@
     } catch (e) {
       $('#playerTip').textContent = '导出失败：' + e.message;
     } finally {
-      btn.textContent = old;
+      btn.innerHTML = old;
       btn.disabled = false;
     }
   }
@@ -2562,6 +2576,296 @@
    * 卦历
    * =============================================================== */
 
+  /* ===============================================================
+   * 个人数据：使用统计
+   * ---------------------------------------------------------------
+   * 全部只存本机 localStorage，不上传、不需要登录。
+   * 听音时长按「播放中每 5 秒累加」统计 —— 暂停不计。
+   * 累计满 20 秒才落盘一次，避免频繁写。
+   * =============================================================== */
+
+  let currentCastKey = null;   // 最近一次起卦对应的历史条目 key
+  let listenAcc = 0;           // 尚未落盘的听音秒数
+  let listenTimer = null;
+
+  function todayKey(d) {
+    const t = d || new Date();
+    return `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`;
+  }
+
+  function loadStats() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STATS_KEY) || '{}');
+      return {
+        totalSec: typeof s.totalSec === 'number' ? s.totalSec : 0,
+        castCount: typeof s.castCount === 'number' ? s.castCount : 0,
+        firstDay: s.firstDay || todayKey(),
+        lastDay: s.lastDay || todayKey()
+      };
+    } catch (e) {
+      return { totalSec: 0, castCount: 0, firstDay: todayKey(), lastDay: todayKey() };
+    }
+  }
+
+  let stats = loadStats();
+
+  function saveStats() {
+    try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch (e) { /* 忽略 */ }
+  }
+
+  /** 把一段收听时长记到当前卦的历史条目上 */
+  function addListenToHistory(sec) {
+    if (!sec || !currentCastKey) return;
+    const list = loadHistory();
+    const idx = list.findIndex((h) => h.key === currentCastKey);
+    if (idx < 0) return;
+    list[idx].listenSec = (list[idx].listenSec || 0) + sec;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch (e) { /* 忽略 */ }
+  }
+
+  /** 播放中计时 */
+  function startListenClock() {
+    if (listenTimer) return;
+    listenTimer = setInterval(() => {
+      if (!player || !player.isPlaying || player.paused) return;
+      stats.totalSec += 5;
+      listenAcc += 5;
+      stats.lastDay = todayKey();
+      if (listenAcc >= 20) {
+        addListenToHistory(listenAcc);
+        listenAcc = 0;
+        saveStats();
+      }
+    }, 5000);
+  }
+
+  /** 停播 / 页面隐藏时把未落盘的时长写掉 */
+  function flushListen() {
+    if (listenAcc > 0) {
+      addListenToHistory(listenAcc);
+      listenAcc = 0;
+    }
+    saveStats();
+  }
+
+  /** 秒 → 中文时长 */
+  function fmtDur(sec) {
+    const s = Math.max(0, Math.round(sec || 0));
+    if (s < 60) return `${s} 秒`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m} 分钟`;
+    const h = Math.floor(m / 60);
+    const rest = m % 60;
+    return rest ? `${h} 小时 ${rest} 分` : `${h} 小时`;
+  }
+
+  /** 首次使用距今天数（含当天） */
+  function daysTogether() {
+    const t = new Date(String(stats.firstDay).replace(/-/g, '/')).getTime();
+    if (!isFinite(t)) return 1;
+    return Math.max(1, Math.floor((Date.now() - t) / 86400000) + 1);
+  }
+
+  /* ===============================================================
+   * 我的：渲染与交互
+   * =============================================================== */
+
+  function renderMine() {
+    if (!$('#pageMine')) return;
+
+    const meta = $('#mineMeta');
+    if (meta) {
+      meta.textContent = `已陪伴 ${daysTogether()} 天 · 起卦 ${stats.castCount} 次`
+        + ` · 累计听音 ${fmtDur(stats.totalSec)}`;
+    }
+
+    const list = loadHistory();
+    const badge = $('#histCount');
+    if (badge) badge.textContent = `${list.length} 条`;
+    const sum = $('#histSummary');
+    if (sum) {
+      sum.textContent = list.length
+        ? `共 ${list.length} 卦 · 累计听音 ${fmtDur(stats.totalSec)}`
+        : '';
+    }
+
+    const box = $('#mineHistory');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!list.length) {
+      box.innerHTML = '<div class="mine-empty">还没有记录。去「起卦」取一卦吧。</div>';
+      return;
+    }
+    list.slice(0, 30).forEach((h) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'mine-item';
+      const dur = h.listenSec ? `<br><span class="mi-dur">听了 ${fmtDur(h.listenSec)}</span>` : '';
+      item.innerHTML =
+        `<span class="mi-symbol">${h.symbol}</span>` +
+        `<span class="mi-body">` +
+          `<span class="mi-name">${h.name}${h.image ? ` · 观${h.image}` : ''}</span>` +
+          `<span class="mi-hint">${h.method || h.hint || ''}</span>` +
+        `</span>` +
+        `<span class="mi-right">${h.date}<br>${h.time}${dur}</span>`;
+      item.addEventListener('click', () => {
+        replayHistory(h);
+        switchPage('cast');
+      });
+      box.appendChild(item);
+    });
+  }
+
+  /* ---------- 轻提示 ---------- */
+  let toastTimer = null;
+  function toast(text) {
+    const el = $('#toast');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.add('is-on');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('is-on'), 2000);
+  }
+
+  /* ---------- 偏好：默认起卦方式 ---------- */
+  function readPref() {
+    try { return JSON.parse(localStorage.getItem(PREF_KEY) || '{}'); } catch (e) { return {}; }
+  }
+
+  function defaultCastMode() {
+    const m = readPref().defaultCastMode;
+    return (m === 'image' || m === 'number') ? m : 'daily';
+  }
+
+  function renderDefaultCastMode() {
+    const mode = defaultCastMode();
+    $$('#prefCastMode .tab').forEach((b) => {
+      b.classList.toggle('is-active', b.dataset.mode === mode);
+    });
+  }
+
+  /** 进入时按偏好切到对应起卦方式（复用 tab 的点击逻辑，避免两处实现漂移） */
+  function applyDefaultCastMode() {
+    const mode = defaultCastMode();
+    if (mode === 'daily') return;          // 页面初始即为 daily，无需动作
+    const tab = document.querySelector(`#castTabs .tab[data-mode="${mode}"]`);
+    if (tab) tab.click();
+  }
+
+  function setDefaultCastMode(mode) {
+    const pref = readPref();
+    pref.defaultCastMode = mode;
+    try { localStorage.setItem(PREF_KEY, JSON.stringify(pref)); } catch (e) { /* 忽略 */ }
+    renderDefaultCastMode();
+  }
+
+  /* ---------- 数据管理 ---------- */
+  function exportHistoryCsv() {
+    const list = loadHistory();
+    if (!list.length) { toast('还没有记录可导出'); return; }
+    const head = ['日期', '时间', '卦号', '卦名', '卦符', '起卦方式', '物象', '收听秒数'];
+    const rows = [head].concat(list.map((h) => [
+      h.date, h.time, h.n, h.name, h.symbol, h.method || '', h.image || '', h.listenSec || 0
+    ]));
+    const esc = (v) => {
+      const s = String(v === undefined || v === null ? '' : v);
+      return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    // BOM 让 Excel 正确识别 UTF-8
+    const csv = '\ufeff' + rows.map((r) => r.map(esc).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `古律象音-历史-${todayKey()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast(`已导出 ${list.length} 条记录`);
+  }
+
+  /* ---------- 联系我们 ---------- */
+  const CONTACT_MAIL = '809006156@qq.com';
+
+  function copyMail() {
+    const done = () => toast(`邮箱已复制：${CONTACT_MAIL}`);
+    const fallback = () => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = CONTACT_MAIL;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        done();
+      } catch (e) {
+        toast(`请手动复制：${CONTACT_MAIL}`);
+      }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(CONTACT_MAIL).then(done).catch(fallback);
+    } else fallback();
+  }
+
+  function bindMine() {
+    const eh = $('#btnExportHistory');
+    if (eh) eh.addEventListener('click', exportHistoryCsv);
+
+    const ew = $('#btnExportWav');
+    if (ew) ew.addEventListener('click', () => exportWav(ew));
+
+    const hc = $('#btnHistClear');
+    if (hc) {
+      hc.addEventListener('click', () => {
+        if (!loadHistory().length) { toast('还没有记录'); return; }
+        if (!window.confirm('清空全部历史记录？此操作不可恢复。')) return;
+        try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* 忽略 */ }
+        currentCastKey = null;
+        renderHistory();
+        renderMine();
+        toast('历史记录已清空');
+      });
+    }
+
+    const pm = $('#prefCastMode');
+    if (pm) {
+      pm.querySelectorAll('.tab').forEach((b) => {
+        b.addEventListener('click', () => {
+          setDefaultCastMode(b.dataset.mode);
+          toast('已设为进入时的默认起卦方式');
+        });
+      });
+    }
+
+    const ps = $('#prefSkin');
+    if (ps) {
+      ps.querySelectorAll('.tab').forEach((b) => {
+        b.addEventListener('click', () => {
+          skin = b.dataset.skin;
+          applySkin(skin);
+          renderSkinOptions();   // 同步顶部设置面板里的选中态
+          savePref();
+        });
+      });
+    }
+
+    const pr = $('#btnPrefReset');
+    if (pr) {
+      pr.addEventListener('click', () => {
+        if (!window.confirm('恢复默认设置？音量、音层、外观都会复位（历史记录不受影响）。')) return;
+        try { localStorage.removeItem(PREF_KEY); } catch (e) { /* 忽略 */ }
+        window.location.reload();
+      });
+    }
+
+    const cm = $('#btnCopyMail');
+    if (cm) cm.addEventListener('click', copyMail);
+  }
+
   function loadHistory() {
     try {
       return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -2575,8 +2879,11 @@
     const now = new Date();
     const key = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${reading.n}`;
     const filtered = list.filter((h) => h.key !== key);
+    // 同日同卦重取：保留此前累计的收听时长，不要清零
+    const prev = list.filter((h) => h.key === key)[0];
     filtered.unshift({
       key,
+      listenSec: (prev && prev.listenSec) || 0,
       n: reading.n,
       name: reading.name,
       symbol: reading.symbol,
@@ -2587,7 +2894,12 @@
       time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered.slice(0, 60)));
+    currentCastKey = key;
+    stats.castCount += 1;
+    stats.lastDay = todayKey();
+    saveStats();
     renderHistory();
+    renderMine();
   }
 
   function renderHistory() {
@@ -2644,20 +2956,30 @@
     deferredPrompt = e;
     const btn = $('#btnInstall');
     if (btn) btn.classList.remove('hidden');
+    const mineBtn = $('#btnInstallMine');
+    if (mineBtn) mineBtn.hidden = false;
   });
 
   let deferredPrompt = null;
 
   function bindInstall() {
     const btn = $('#btnInstall');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
+    const mineBtn = $('#btnInstallMine');
+
+    // 顶栏与「我的」页两个入口共用同一个 install prompt
+    const doInstall = async () => {
       if (!deferredPrompt) return;
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') btn.classList.add('hidden');
+      if (outcome === 'accepted') {
+        if (btn) btn.classList.add('hidden');
+        if (mineBtn) mineBtn.hidden = true;
+      }
       deferredPrompt = null;
-    });
+    };
+
+    if (btn) btn.addEventListener('click', doInstall);
+    if (mineBtn) mineBtn.addEventListener('click', doInstall);
   }
 
   /* ===============================================================

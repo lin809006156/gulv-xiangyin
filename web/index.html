@@ -441,6 +441,102 @@
       <div class="learn-wrap" id="learnWrap"></div>
     </section>
 
+    <!-- ============ 我的 ============ -->
+    <section class="page" id="pageMine">
+      <div class="glass-card mine-hero-card">
+        <div class="mine-hero">
+          <div class="mine-avatar" aria-hidden="true">☯</div>
+          <div class="mine-id">
+            <h2>古律象音</h2>
+            <p class="mine-meta" id="mineMeta">已陪伴 — 天 · 起卦 — 次</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 历史记录 -->
+      <div class="glass-card">
+        <div class="card-head">
+          <h2>历史记录</h2>
+          <span class="mine-badge" id="histCount">0 条</span>
+        </div>
+        <p class="panel-note" id="histSummary"></p>
+        <div class="mine-list" id="mineHistory"></div>
+      </div>
+
+      <!-- 数据管理 -->
+      <div class="glass-card">
+        <div class="card-head"><h2>数据管理</h2></div>
+        <p class="panel-desc">全部数据只存在本机，不上传服务器，也无需登录。</p>
+        <div class="mine-rows">
+          <button class="mine-row" id="btnExportHistory" type="button">
+            <span>导出历史记录<span class="mine-row-sub">CSV，可用表格打开</span></span>
+            <i aria-hidden="true">›</i>
+          </button>
+          <button class="mine-row" id="btnExportWav" type="button">
+            <span>导出当前曲目<span class="mine-row-sub">WAV，含所选音层</span></span>
+            <i aria-hidden="true">›</i>
+          </button>
+          <button class="mine-row is-danger" id="btnHistClear" type="button">
+            <span>清空历史记录<span class="mine-row-sub">不可恢复</span></span>
+            <i aria-hidden="true">›</i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 偏好设置 -->
+      <div class="glass-card">
+        <div class="card-head"><h2>偏好设置</h2></div>
+        <div class="mine-rows">
+          <div class="mine-row is-static has-seg">
+            <span>进入时默认<span class="mine-row-sub">起卦方式</span></span>
+            <div class="segmented mine-seg" id="prefCastMode">
+              <button class="tab is-active" data-mode="daily" type="button">每日</button>
+              <button class="tab" data-mode="image" type="button">观象</button>
+              <button class="tab" data-mode="number" type="button">数字</button>
+            </div>
+          </div>
+          <div class="mine-row is-static has-seg">
+            <span>外观<span class="mine-row-sub">与设置里的皮肤同一份状态</span></span>
+            <div class="segmented mine-seg mine-seg-3" id="prefSkin">
+              <button class="tab is-active" data-skin="paper" type="button">纸本</button>
+              <button class="tab" data-skin="shine" type="button">流光</button>
+              <button class="tab" data-skin="night" type="button">夜阑</button>
+            </div>
+          </div>
+          <button class="mine-row" id="btnPrefReset" type="button">
+            <span>恢复默认设置<span class="mine-row-sub">音量、音层、外观一并复位</span></span>
+            <i aria-hidden="true">›</i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 联系我们 -->
+      <div class="glass-card">
+        <div class="card-head"><h2>联系我们</h2></div>
+        <p class="panel-desc">用得顺手也好，遇到问题也好，都欢迎来信。</p>
+        <a class="mine-mail" href="mailto:809006156@qq.com">809006156@qq.com</a>
+        <div class="mine-actions">
+          <button class="btn btn-soft btn-sm" id="btnCopyMail" type="button">复制邮箱</button>
+        </div>
+      </div>
+
+      <!-- 关于 -->
+      <div class="glass-card">
+        <div class="card-head"><h2>关于</h2></div>
+        <div class="mine-about">
+          <p>古律象音 <span id="mineVer">v1.4.3</span></p>
+          <p>以《周易》卦象与古代律吕文化为灵感，生成供个人赏析与静心的音乐。属传统文化与艺术创作，不含任何预测功效。</p>
+          <p>五音之说是传统音乐与养生观念，非现代医学结论，不可替代医疗与专业建议。</p>
+        </div>
+        <div class="mine-rows">
+          <button class="mine-row" id="btnInstallMine" type="button" hidden>
+            <span>安装到桌面<span class="mine-row-sub">像 App 一样从桌面直接打开</span></span>
+            <i aria-hidden="true">›</i>
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- ============ 免责 ============ -->
     <footer class="disclaimer">
       <p>
@@ -475,6 +571,9 @@
     </button>
   </div>
 
+  <!-- 通用轻提示（导出、复制、清空等操作的反馈） -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
   <!-- ============ 底部玻璃标签栏 ============ -->
   <nav class="tabbar" id="tabbar">
     <button class="tabbtn is-active" data-page="cast" aria-current="page">
@@ -502,6 +601,13 @@
         <path d="M12 5.6v14" fill="none" stroke="currentColor" stroke-width="1.5"/>
       </svg>
       <span>学易</span>
+    </button>
+    <button class="tabbtn" data-page="mine">
+      <svg viewBox="0 0 24 24" class="tb-icon" aria-hidden="true">
+        <circle cx="12" cy="7.6" r="3.5"/>
+        <path d="M4.7 20.3c0-3.9 3.3-6.3 7.3-6.3s7.3 2.4 7.3 6.3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+      <span>我的</span>
     </button>
   </nav>
 

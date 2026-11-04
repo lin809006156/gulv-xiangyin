@@ -122,6 +122,7 @@ body {
 }
 
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-text { min-width: 0; }
 
 .brand-mark {
   width: 42px; height: 42px; flex: none;
@@ -144,6 +145,8 @@ body {
   font-weight: 700;
   letter-spacing: .06em;
   line-height: 1.25;
+  /* 窄屏下顶栏元素多，标题绝不允许折行（曾断成「古律象 / 音」） */
+  white-space: nowrap;
 }
 .brand-text p {
   font-size: 11px;
@@ -1692,6 +1695,12 @@ body {
 @media (max-width: 480px) {
   .glass-card { padding: 16px; border-radius: 18px; }
   .brand-text p { display: none; }
+  /* 分段器在窄屏是 width:100%，与左侧文字同行必然互相挤压 —— 改为上下两行 */
+  .mine-row.has-seg { flex-direction: column; align-items: stretch; gap: 9px; }
+  .mine-row.has-seg .mine-seg { width: 100%; }
+  .mine-row.has-seg .mine-seg .tab { flex: 1; text-align: center; }
+  /* 顶栏放不下「安装到桌面」，改到「我的」页；否则标题会被挤断行 */
+  .header .install-btn { display: none; }
   .header-date { font-size: 11px; }
   .result-head { gap: 13px; }
   .result-symbol { font-size: 36px; }
@@ -2364,3 +2373,210 @@ body.has-miniplayer .sheet-body {
   35%  { box-shadow: 0 0 0 6px rgba(var(--tint),.28), 0 4px 18px rgba(178,58,46,.22); }
   100% { box-shadow: 0 0 0 0 rgba(var(--tint),0); }
 }
+
+/* ===============================================================
+   我的（个人页）
+   =============================================================== */
+
+.mine-hero-card { padding: 18px 20px; }
+
+.mine-hero { display: flex; align-items: center; gap: 14px; }
+
+.mine-avatar {
+  width: 52px; height: 52px; flex: none;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 26px; color: var(--cinnabar);
+  background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.9), rgba(178,58,46,.10));
+  box-shadow: 0 0 0 1px var(--glass-brd-out), 0 4px 14px rgba(178,58,46,.12);
+}
+
+.mine-id h2 { font-size: 17px; font-weight: 700; letter-spacing: .05em; }
+.mine-meta {
+  margin-top: 3px;
+  font-size: 12px; color: var(--ink-3);
+  letter-spacing: .02em;
+}
+
+.mine-badge {
+  font-size: 11.5px; color: var(--ink-3);
+  padding: 3px 9px; border-radius: 999px;
+  background: rgba(var(--tint), .55);
+  box-shadow: 0 0 0 1px var(--glass-brd-out);
+}
+
+/* ---------- 历史列表 ---------- */
+.mine-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+
+.mine-item {
+  appearance: none;
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background .16s ease;
+  border-bottom: 1px solid var(--line-soft);
+}
+.mine-item:last-child { border-bottom: none; }
+.mine-item:hover { background: rgba(var(--tint), .5); }
+
+.mi-symbol {
+  font-size: 24px; line-height: 1; flex: none;
+  color: var(--ink); width: 30px; text-align: center;
+}
+.mi-body { flex: 1; min-width: 0; }
+.mi-name {
+  display: block;
+  font-size: 13.5px; font-weight: 600; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mi-hint {
+  display: block; margin-top: 2px;
+  font-size: 11px; color: var(--ink-4);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mi-right {
+  flex: none; text-align: right;
+  font-size: 11px; color: var(--ink-4); line-height: 1.5;
+}
+.mi-dur { color: var(--indigo); }
+
+.mine-empty {
+  padding: 18px 4px;
+  font-size: 12.5px; color: var(--ink-4);
+  text-align: center;
+}
+
+/* ---------- 设置行 ---------- */
+.mine-rows { display: flex; flex-direction: column; }
+
+.mine-row {
+  appearance: none;
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px;
+  padding: 13px 4px;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  font-size: 13.5px; color: var(--ink);
+  cursor: pointer;
+  transition: background .16s ease;
+}
+.mine-row:last-child { border-bottom: none; }
+.mine-row:not(.is-static):hover { background: rgba(var(--tint), .5); }
+.mine-row.is-static { cursor: default; }
+/* 左侧文字必须能收缩（min-width:0）且不许换行 ——
+   否则在 flex column 里，文本节点会被右侧的分段器挤成竖排单字（「进」「入」各一行） */
+.mine-row > span {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px;
+  white-space: nowrap;
+}
+.mine-row > span > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mine-row > i {
+  font-style: normal; font-size: 17px; color: var(--ink-4);
+  line-height: 1;
+}
+.mine-row.is-danger { color: var(--cinnabar); }
+.mine-row.is-danger > i { color: var(--cinnabar); opacity: .6; }
+
+.mine-row-sub {
+  font-size: 11px; color: var(--ink-4);
+  font-weight: 400; letter-spacing: .01em;
+}
+.mine-row.is-danger .mine-row-sub { color: var(--cinnabar); opacity: .62; }
+
+/* 分段选择器在窄行里收紧 */
+.mine-seg { flex: none; }
+.mine-seg .tab { padding: 5px 11px; font-size: 12px; }
+
+/* ---------- 开关 ---------- */
+.mine-switch { position: relative; flex: none; display: inline-flex; }
+.mine-switch input {
+  position: absolute; opacity: 0; width: 100%; height: 100%;
+  margin: 0; cursor: pointer;
+}
+.mine-switch i {
+  width: 42px; height: 24px; border-radius: 999px;
+  background: rgba(178,160,132,.30);
+  box-shadow: inset 0 0 0 1px var(--glass-brd-out);
+  transition: background .2s ease;
+  position: relative;
+}
+.mine-switch i::after {
+  content: '';
+  position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.18);
+  transition: transform .2s cubic-bezier(.22,.9,.32,1);
+}
+.mine-switch input:checked + i { background: var(--cinnabar); }
+.mine-switch input:checked + i::after { transform: translateX(18px); }
+.mine-switch input:focus-visible + i { box-shadow: 0 0 0 3px rgba(178,58,46,.22); }
+
+/* ---------- 联系我们 ---------- */
+.mine-mail {
+  display: inline-block;
+  font-size: 15px; font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--cinnabar);
+  text-decoration: none;
+  padding: 2px 0;
+  border-bottom: 1px dashed rgba(178,58,46,.34);
+}
+.mine-mail:hover { border-bottom-style: solid; }
+
+.mine-actions { display: flex; gap: 10px; margin-top: 14px; }
+
+/* ---------- 关于 ---------- */
+.mine-about p {
+  font-size: 12.5px; color: var(--ink-3);
+  line-height: 1.75;
+  margin-bottom: 8px;
+}
+.mine-about p:last-child { margin-bottom: 0; }
+.mine-about p:first-child {
+  font-size: 14px; color: var(--ink); font-weight: 600;
+}
+.mine-about #mineVer { color: var(--ink-4); font-weight: 400; font-size: 12px; }
+
+/* ---------- 通用轻提示 ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--tabbar-h) + 36px);
+  transform: translateX(-50%) translateY(8px);
+  z-index: 120;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow), 0 0 0 1px var(--glass-brd-out);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s cubic-bezier(.22,.9,.32,1);
+  max-width: min(320px, calc(100% - 48px));
+  text-align: center;
+}
+.toast.is-on {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* 三选一的分段器再收紧一点 */
+.mine-seg-3 .tab { padding: 5px 9px; font-size: 11.5px; letter-spacing: .02em; }
+
+/* .mine-row 用了 display:flex，UA 的 [hidden]{display:none} 优先级不够 */
+.mine-row[hidden] { display: none; }

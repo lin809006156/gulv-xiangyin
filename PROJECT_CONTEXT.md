@@ -188,12 +188,12 @@ npm run build:android     # 同步+图标+cap sync（再 gradlew assembleDebug �
 
 ---
 
-## 六、测试清单与规模（v1.4.2 全绿）
+## 六、测试清单与规模（v1.4.3 全绿）
 
 | 脚本 | 覆盖 | 规模 |
 | ---- | ---- | ---- |
-| `e2e.js` | 真实 Chromium 端到端（含真实播放） | 162 项 |
-| `mp-test.js` | 小程序端逻辑 | 134 项 |
+| `e2e.js` | 真实 Chromium 端到端（含真实播放） | 172 项 |
+| `mp-test.js` | 小程序端逻辑（含「我的」页 19 项） | 153 项 |
 | `verify-ui.js` | 小程序界面一致性 | 71 项 |
 | `verify-generative.js` | 作曲 / 即兴 / 音层总线 | 37 项 |
 | `verify-ambient.js` | 音层实际响度与两端一致（v1.4.2 新增） | 14 项 |
@@ -292,6 +292,14 @@ Android SDK 在 `~/.workbuddy/tools/android-sdk`（见 `android/local.properties
 - GitHub Release 已建，APK 已上传：
   https://github.com/lin809006156/gulv-xiangyin/releases/tag/v1.4.2
 - 小程序 v1.4.2 **已上传**（`cli upload`，包 369.1 KB），待后台提交审核
+
+**v1.4.3 已完成并发布**（tag `v1.4.3`）：
+- 新增**「我的」页**：底部由三栏改四栏，历史记录 / 数据管理 / 偏好设置 / 联系我们 / 关于
+- **使用时长统计**（此前完全没有）：播放中每 5 秒累加，暂停不计；每条历史带该卦累计时长
+- 数据管理：导出历史 CSV、导出曲目 WAV（小程序端改为复制 CSV 文本）、清空
+- 偏好：进入时默认起卦方式、外观三段（与顶部设置共用状态）、恢复默认
+- 顺带修三个排版问题：顶栏标题折行、设置行文字被挤成竖排、分段器与文字重叠
+- 两端同步实现，`mp-test` 153、`e2e` 172 全绿
 
 **未完成**：
 - v1.4.0 无独立 Release（未单独出包，其改动已累积在 v1.4.1 的 APK 中）
